@@ -8,6 +8,8 @@ import { runReferee } from "@/agent/referee";
 import { executeDecision } from "@/agent/executor";
 import { verifyTrackingWithKernel } from "@/integrations/kernel/client";
 
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   try {
     // Authenticate with internal sweep secret

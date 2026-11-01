@@ -3,6 +3,8 @@ import { getDealByToken } from "@/db/queries";
 import { runReferee } from "@/agent/referee";
 import { executeDecision } from "@/agent/executor";
 
+export const maxDuration = 60;
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ token: string }> }

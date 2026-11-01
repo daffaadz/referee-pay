@@ -1,0 +1,35 @@
+name: Deadline Sweeper
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    # Allows manual triggering from GitHub Actions tab for testing & live demos
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Referee Deadline Sweep
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          SWEEP_SECRET: ${{ secrets.INTERNAL_SWEEP_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$SWEEP_SECRET" ]; then
+            echo "Error: APP_URL or INTERNAL_SWEEP_SECRET secret is not configured in GitHub repository secrets."
+            exit 1
+          fi
+          echo "Invoking $APP_URL/api/internal/sweep..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${APP_URL}/api/internal/sweep" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-secret: ${SWEEP_SECRET}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "Sweep failed with status $HTTP_CODE"
+            exit 1
+          fi
+          echo "Deadline sweep completed successfully."

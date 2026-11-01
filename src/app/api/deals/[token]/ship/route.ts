@@ -5,6 +5,8 @@ import { appendDealEvent } from "@/db/events";
 import { transition, DealStatus } from "@/domain/state-machine";
 import { verifyTrackingWithKernel } from "@/integrations/kernel/client";
 
+export const maxDuration = 60;
+
 const shipBodySchema = z.object({
   carrier: z.string().min(1, "Carrier is required"),
   trackingNumber: z.string().min(1, "Tracking number is required"),

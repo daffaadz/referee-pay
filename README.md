@@ -87,7 +87,7 @@ flowchart TD
 | **PayPal Sandbox** | `@paypal/paypal-server-sdk` | Authorizes order (`intent=AUTHORIZE`), captures with `final_capture: true`, voids authorizations on refund, and handles payouts. Uses `PayPal-Request-Id` idempotency. |
 | **Kernel** | `@onkernel/sdk` | Launches remote cloud browsers in disposable containers, runs Playwright scripts, extracts tracking status, and saves verified screenshots. |
 | **LLM Provider** | Google Gemini (`gemini-3.5-flash-lite`) | Powers both the Drafter Agent (natural language to contract) and Referee Arbiter Loop via Vercel AI SDK (`@ai-sdk/google` & `ai`). |
-| **Render** | `render.yaml` Blueprint | Hosts the Next.js production web service, managed PostgreSQL database, and periodic deadline sweeper cron. |
+| **Hosting & Database** | Vercel Hobby + Neon Postgres | Free serverless hosting for Next.js App Router with pooled Neon PostgreSQL connection. |
 | **APIMatic** | Dev-time Context | Used during development to validate PayPal SDK methods, schema constraints, and error codes against official API docs. |
 | **Web Framework** | Next.js 16 (Turbopack) | Modern React 19 App Router with server-rendered routes and mobile-first responsive Tailwind CSS. |
 | **ORM & DB** | Drizzle ORM & PostgreSQL | Strictly typed schemas with append-only event sourcing for all deal state transitions. |
@@ -228,17 +228,46 @@ pnpm smoke:e2e
 
 ---
 
-## 8. Deployment to Render
+## 8. Deployment to Vercel & Neon Postgres
 
-This repository includes a fully configured [`render.yaml`](render.yaml) Blueprint:
+Referee is architected for zero cost serverless deployment on Vercel Hobby with Neon PostgreSQL:
 
-1. Connect your GitHub repository to [Render](https://render.com).
-2. Create a new **Blueprint Instance**.
-3. Render will provision:
-   - **`referee-web`**: Next.js App Router Web Service.
-   - **`referee-db`**: Managed PostgreSQL Database.
-   - **`referee-deadline-sweep`**: Cron Job executing `POST /api/internal/sweep` every minute.
-4. Fill in your sandbox credentials (`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `KERNEL_API_KEY`, `GEMINI_API_KEY`) in the Render Dashboard environment settings.
+### Step 1: Provision Neon PostgreSQL
+1. Create a free account at [Neon](https://neon.tech) and create a new project.
+2. Under Connection Details, select **Pooled connection** and copy the connection string:
+   `postgres://user:password@ep-xyz-pooler.region.aws.neon.tech/neondb?sslmode=require`
+3. Push your database schema from your local terminal:
+   ```bash
+   DATABASE_URL="your_neon_pooled_connection_string" pnpm db:push
+   ```
+
+### Step 2: Deploy to Vercel
+1. Import your GitHub repository to [Vercel](https://vercel.com).
+2. Set the framework preset to **Next.js**.
+3. Configure the environment variables in the Vercel project settings:
+   - `APP_URL`: Your live Vercel URL (e.g. `https://referee-pay.vercel.app`)
+   - `DATABASE_URL`: Your Neon pooled connection string
+   - `PAYPAL_ENV`: `sandbox`
+   - `PAYPAL_CLIENT_ID`: Your PayPal Sandbox REST Client ID
+   - `PAYPAL_CLIENT_SECRET`: Your PayPal Sandbox REST Client Secret
+   - `KERNEL_API_KEY`: Your Kernel API key
+   - `GEMINI_API_KEY`: Your Google Gemini API key
+   - `INTERNAL_SWEEP_SECRET`: A secure random secret string
+   - `DEMO_MODE`: `true`
+   - `DEMO_TIME_SCALE`: `1440`
+4. Click **Deploy**.
+
+### Step 3: Configure PayPal Return URLs
+In your PayPal Developer Dashboard under your Sandbox REST App:
+- Add your Vercel URL to authorized origins and redirect URIs (e.g. `https://referee-pay.vercel.app`).
+
+### Step 4: Configure the 5-Minute Deadline Sweeper
+Because Vercel Hobby native crons run at most once per day, Referee uses an external trigger:
+- **GitHub Actions (Default):** Add repository secrets under GitHub Settings -> Secrets and variables -> Actions:
+  - `APP_URL`: Your live Vercel deployment URL
+  - `INTERNAL_SWEEP_SECRET`: The same secret configured in Vercel
+  The workflow `.github/workflows/sweep.yml` runs automatically every 5 minutes and can also be triggered manually via Workflow Dispatch.
+- **Alternative (cron-job.org):** Create a free job at [cron-job.org](https://cron-job.org) targeting `POST https://your-app.vercel.app/api/internal/sweep` every 5 minutes with the header `x-internal-secret: your_secret`.
 
 ---
 

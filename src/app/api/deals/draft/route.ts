@@ -3,6 +3,8 @@ import { z } from "zod";
 import { draftDeal } from "@/agent/drafter";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
+export const maxDuration = 60;
+
 const draftRequestSchema = z.object({
   text: z.string().min(3, "Text must be at least 3 characters").max(4000),
   clarification: z.string().max(2000).optional(),
