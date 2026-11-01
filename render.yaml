@@ -8,7 +8,7 @@ services:
     runtime: node
     plan: starter
     buildCommand: pnpm install && pnpm build
-    startCommand: pnpm start
+    startCommand: pnpm db:push && pnpm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -32,6 +32,8 @@ services:
         value: google
       - key: LLM_MODEL
         value: gemini-3.5-flash-lite
+      - key: GEMINI_API_KEY
+        sync: false
       - key: LLM_API_KEY
         sync: false
       - key: INTERNAL_SWEEP_SECRET
@@ -49,7 +51,7 @@ services:
     runtime: node
     schedule: "* * * * *"
     buildCommand: "true"
-    startCommand: curl -s -f -X POST "${APP_URL}/api/internal/sweep" -H "Authorization: Bearer ${INTERNAL_SWEEP_SECRET}"
+    startCommand: curl -s -f -L -X POST "https://${APP_URL}/api/internal/sweep" -H "x-internal-secret: ${INTERNAL_SWEEP_SECRET}"
     envVars:
       - key: APP_URL
         fromService:
