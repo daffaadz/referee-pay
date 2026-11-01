@@ -51,7 +51,7 @@ services:
     runtime: node
     schedule: "* * * * *"
     buildCommand: "true"
-    startCommand: curl -s -f -L -X POST "https://${APP_URL}/api/internal/sweep" -H "x-internal-secret: ${INTERNAL_SWEEP_SECRET}"
+    startCommand: 'curl -s -f -L -X POST "https://${APP_URL}/api/internal/sweep" -H "x-internal-secret: ${INTERNAL_SWEEP_SECRET}"'
     envVars:
       - key: APP_URL
         fromService:
