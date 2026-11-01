@@ -3,6 +3,8 @@
 > An autonomous, explainable AI arbiter that holds a buyer's money through PayPal (sandbox) until a deal is actually fulfilled, verifies delivery by browsing the real web (Kernel), and autonomously decides: **release, refund, or settle**.
 >
 > Built for the **PayPal AI Hackathon 2026** (Devpost).
+>
+> **Live Demo:** [https://referee-pay.vercel.app](https://referee-pay.vercel.app)
 
 ---
 

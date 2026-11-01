@@ -16,7 +16,8 @@
     "smoke:paypal": "tsx scripts/smoke-paypal.ts",
     "smoke:kernel": "tsx scripts/smoke-kernel.ts",
     "smoke:e2e": "tsx scripts/smoke-e2e.ts",
-    "smoke:neon": "tsx scripts/test-neon.ts"
+    "smoke:neon": "tsx scripts/test-neon.ts",
+    "smoke:live": "tsx scripts/verify-live.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.1.20",
