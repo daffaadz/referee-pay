@@ -34,15 +34,15 @@ export function CreateDealForm() {
   // Presets for quick 1-click testing
   const presets = [
     {
-      label: "🚲 Folding Bike ($80, No Return)",
+      label: "Folding Bike ($80, No Return)",
       text: "Jual sepeda lipat seharga 80 dolar. Diantar dalam waktu maksimal 10 hari. Tidak bisa return.",
     },
     {
-      label: "👜 Leather Bag ($75, 7d Return)",
+      label: "Leather Bag ($75, 7d Return)",
       text: "Selling handmade leather bag to Maya for $75. Ship in 3 days, delivery in 14 days, 7 day return window.",
     },
     {
-      label: "💻 Laptop ($450, High Value)",
+      label: "Laptop ($450, High Value)",
       text: "Selling ThinkPad laptop for $450 to Alex. Ship within 2 days, 10 days delivery, 3 days inspection period.",
     },
   ];
@@ -197,15 +197,15 @@ export function CreateDealForm() {
       {createdDeal ? (
         <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 space-y-6 shadow-sm">
           <div className="flex items-center gap-3 pb-4 border-b border-zinc-100 dark:border-zinc-800">
-            <div className="h-10 w-10 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-bold text-base">
-              ✓
+            <div className="h-10 w-10 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-bold text-xs">
+              OK
             </div>
             <div>
               <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
                 Deal Created & Ready
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Item: {createdDeal.contract.item.title} — {createdDeal.contract.item.price.amount} {createdDeal.contract.item.price.currency}
+                Item: {createdDeal.contract.item.title} ({createdDeal.contract.item.price.amount} {createdDeal.contract.item.price.currency})
               </p>
             </div>
           </div>
@@ -222,7 +222,7 @@ export function CreateDealForm() {
                   onClick={() => copyToClipboard(createdDeal.buyerUrl, "buyer")}
                   className="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-medium hover:opacity-90 transition"
                 >
-                  {copiedLink === "buyer" ? "✓ Copied" : "Copy Buyer Link"}
+                  {copiedLink === "buyer" ? "Copied" : "Copy Buyer Link"}
                 </button>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -251,7 +251,7 @@ export function CreateDealForm() {
                   onClick={() => copyToClipboard(createdDeal.sellerUrl, "seller")}
                   className="text-xs px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
                 >
-                  {copiedLink === "seller" ? "✓ Copied" : "Copy Seller Link"}
+                  {copiedLink === "seller" ? "Copied" : "Copy Seller Link"}
                 </button>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -348,7 +348,7 @@ export function CreateDealForm() {
             {/* Success Feedback */}
             {draftSuccess && (
               <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-emerald-200 dark:border-emerald-900/50 text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                <span>✓</span>
+                <span className="font-semibold text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80">OK</span>
                 <span>{draftSuccess}</span>
               </div>
             )}
@@ -356,7 +356,7 @@ export function CreateDealForm() {
             {/* Error Feedback */}
             {draftError && (
               <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
-                <span>✕</span>
+                <span className="font-semibold text-[10px] px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80">ERR</span>
                 <span>{draftError}</span>
               </div>
             )}
@@ -623,7 +623,7 @@ export function CreateDealForm() {
 
             {/* Escrow summary banner */}
             <div className="p-4 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 text-xs text-zinc-600 dark:text-zinc-400 flex items-start gap-2.5">
-              <span className="text-base leading-none">🛡️</span>
+              <span className="font-semibold text-[10px] px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 mt-0.5">SECURE</span>
               <div>
                 <p className="font-medium text-zinc-900 dark:text-zinc-200">
                   Automated Escrow Protection

@@ -10,7 +10,7 @@ const draftRequestSchema = z.object({
 
 export async function POST(req: Request) {
   const startTime = Date.now();
-  console.log("[Drafter API] 📥 Received POST /api/deals/draft");
+  console.log("[Drafter API] Received POST /api/deals/draft");
 
   // Rate limit: 15 requests per minute per IP
   const clientIp = getClientIp(req);
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const parsed = draftRequestSchema.safeParse(body);
 
     if (!parsed.success) {
-      console.warn("[Drafter API] ⚠️ Invalid draft request body:", parsed.error.format());
+      console.warn("[Drafter API] Invalid draft request body:", parsed.error.format());
       return NextResponse.json(
         { error: "Invalid draft request", details: parsed.error.format() },
         { status: 400 }
@@ -35,13 +35,13 @@ export async function POST(req: Request) {
     }
 
     const preview = parsed.data.text.replace(/\s+/g, " ").slice(0, 60);
-    console.log(`[Drafter API] 🤖 Calling LLM to parse contract for: "${preview}..."`);
+    console.log(`[Drafter API] Calling LLM to parse contract for: "${preview}..."`);
 
     const result = await draftDeal(parsed.data);
     const elapsed = Date.now() - startTime;
 
     console.log(
-      `[Drafter API] ✅ Successfully drafted contract in ${elapsed}ms: ` +
+      `[Drafter API] Successfully drafted contract in ${elapsed}ms: ` +
         `"${result.contract.item.title}" (${result.contract.item.price.amount} ${result.contract.item.price.currency})`
     );
 
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
-    console.error(`[Drafter API] ❌ Error drafting deal after ${elapsed}ms:`, error?.message || error);
+    console.error(`[Drafter API] Error drafting deal after ${elapsed}ms:`, error?.message || error);
     return NextResponse.json(
       { error: "Failed to draft deal contract", message: error?.message || "Unknown error" },
       { status: 500 }

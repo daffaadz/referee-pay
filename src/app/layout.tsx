@@ -3,7 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Referee — Neutral AI Escrow & Arbiter",
+  title: "Referee: Neutral AI Escrow & Arbiter",
   description: "Proactive AI escrow arbiter for peer-to-peer commerce powered by PayPal and Kernel.",
 };
 
@@ -51,7 +51,7 @@ export default function RootLayout({
         <div className="flex-1">{children}</div>
 
         <footer className="border-t border-zinc-200 dark:border-zinc-800 py-6 text-center text-xs text-zinc-400 dark:text-zinc-500">
-          <p>Referee — Autonomous escrow arbiter on PayPal Sandbox & Kernel Cloud Browser</p>
+          <p>Referee: Autonomous escrow arbiter on PayPal Sandbox & Kernel Cloud Browser</p>
         </footer>
       </body>
     </html>

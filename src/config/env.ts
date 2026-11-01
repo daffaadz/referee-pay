@@ -33,7 +33,7 @@ export type Env = z.infer<typeof envSchema>;
 function validateEnv(): Env {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
-    console.error("❌ Invalid environment variables:", result.error.format());
+    console.error("Invalid environment variables:", result.error.format());
     throw new Error(
       `Environment validation failed: ${result.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`
     );

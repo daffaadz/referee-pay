@@ -145,8 +145,8 @@ async function runEndToEndSmoke() {
 
   const happyDecisions = await getDecisionsForDeal(happyDealId);
   const happyDecJson = happyDecisions[0].decisionJson as Decision;
-  console.log(`✓ Decision Log record created: ID ${happyDecisions[0].id}, citing clauses [${happyDecJson.clauseRefs.join(", ")}], evidence [${happyDecJson.evidenceRefs.join(", ")}]`);
-  console.log("✓ PATH 1 (HAPPY PATH): SUCCESS\n");
+  console.log(`[PASS] Decision Log record created: ID ${happyDecisions[0].id}, citing clauses [${happyDecJson.clauseRefs.join(", ")}], evidence [${happyDecJson.evidenceRefs.join(", ")}]`);
+  console.log("[PASS] PATH 1 (HAPPY PATH): SUCCESS\n");
 
   // ==========================================================
   // PATH 2: FAILURE PATH (Create -> Pay -> No Shipment -> Refund)
@@ -212,8 +212,8 @@ async function runEndToEndSmoke() {
 
   const failDecisions = await getDecisionsForDeal(failDealId);
   const failDecJson = failDecisions[0].decisionJson as Decision;
-  console.log(`✓ Decision Log record created: ID ${failDecisions[0].id}, citing clauses [${failDecJson.clauseRefs.join(", ")}]`);
-  console.log("✓ PATH 2 (FAILURE PATH): SUCCESS\n");
+  console.log(`[PASS] Decision Log record created: ID ${failDecisions[0].id}, citing clauses [${failDecJson.clauseRefs.join(", ")}]`);
+  console.log("[PASS] PATH 2 (FAILURE PATH): SUCCESS\n");
 
   console.log("=================================================");
   console.log("  ALL END-TO-END FLOWS VERIFIED SUCCESSFULLY     ");

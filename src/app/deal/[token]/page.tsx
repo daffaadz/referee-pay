@@ -306,8 +306,8 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
   if (error || !dealData) {
     return (
       <div className="max-w-md mx-auto my-16 p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center space-y-3">
-        <div className="h-10 w-10 mx-auto rounded-full bg-rose-50 text-rose-700 flex items-center justify-center font-bold">
-          ✕
+        <div className="h-10 w-10 mx-auto rounded-full bg-rose-50 text-rose-700 flex items-center justify-center font-bold text-xs">
+          ERR
         </div>
         <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Deal Not Found</h2>
         <p className="text-xs text-zinc-500">{error || "Invalid capability link."}</p>
@@ -355,7 +355,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
 
           {/* Where is the money explanation banner */}
           <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-start gap-3 text-xs text-zinc-600 dark:text-zinc-400">
-            <span className="text-base leading-none">💰</span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 mt-0.5">STATUS</span>
             <div className="flex-1">
               <strong className="text-zinc-900 dark:text-zinc-200 mr-1.5 font-medium">
                 Escrow Status:
@@ -395,7 +395,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                         onClick={handleBuyerCreateOrder}
                         className="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold text-xs transition disabled:opacity-50 flex items-center gap-2"
                       >
-                        <span>💳 Authorize on PayPal ({contract.item.price.amount} {contract.item.price.currency})</span>
+                        <span>Authorize on PayPal ({contract.item.price.amount} {contract.item.price.currency})</span>
                       </button>
 
                       {createdOrderId && (
@@ -405,7 +405,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                           onClick={handleBuyerAuthorize}
                           className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition disabled:opacity-50"
                         >
-                          ✓ I Approved on PayPal &rarr; Finalize Escrow Hold
+                          I Approved on PayPal &rarr; Finalize Escrow Hold
                         </button>
                       )}
                     </div>
@@ -444,7 +444,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 space-y-3">
                     <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                      Package Delivered — Inspection Window Active
+                      Package Delivered: Inspection Window Active
                     </h3>
                     <p className="text-xs text-zinc-600 dark:text-zinc-400">
                       Carrier tracking confirmed delivery. Please inspect your item. If satisfied, release the funds. If no dispute is raised, funds will auto-release automatically.
@@ -456,7 +456,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                         onClick={handleConfirmReceipt}
                         className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition"
                       >
-                        ✓ Confirm Receipt & Release Funds
+                        Confirm Receipt & Release Funds
                       </button>
                       <button
                         type="button"
@@ -519,7 +519,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                 <form onSubmit={handleSellerShip} className="p-5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-4">
                   <div>
                     <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                      Funds Secured in Escrow — Ready to Ship!
+                      Funds Secured in Escrow: Ready to Ship!
                     </h3>
                     <p className="text-xs text-zinc-500 mt-0.5">
                       Enter your shipping tracking number below so Referee can automatically verify delivery.

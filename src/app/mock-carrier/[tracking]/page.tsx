@@ -88,7 +88,7 @@ export default async function MockCarrierPage({
             </div>
           ) : (
             <div className="p-3 rounded-lg bg-rose-50 text-rose-700 text-xs font-medium">
-              ⚠️ Package was returned to sender.
+              Notice: Package was returned to sender.
             </div>
           )}
 

@@ -61,20 +61,20 @@ export function DecisionLog({
       case "ALLOWED":
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-            ✓ Policy ALLOWED
+            Policy ALLOWED
           </span>
         );
       case "BLOCKED":
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 dark:bg-rose-950/50 px-2 py-0.5 text-[11px] font-medium text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-            ✕ Policy BLOCKED
+            Policy BLOCKED
           </span>
         );
       case "ESCALATED":
       default:
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-            ⚠ Policy ESCALATED
+            Policy ESCALATED
           </span>
         );
     }

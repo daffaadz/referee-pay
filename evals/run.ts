@@ -428,9 +428,9 @@ async function main() {
       const outcome = await runScenarioOnce(scenario, run);
       if (outcome.pass) {
         results[scenario.id].passes++;
-        console.log(`  ✓ Scenario ${scenario.id} (Run ${run}): ${scenario.name}`);
+        console.log(`  [PASS] Scenario ${scenario.id} (Run ${run}): ${scenario.name}`);
       } else {
-        console.error(`  ✕ Scenario ${scenario.id} (Run ${run}) FAILED: ${scenario.name}`);
+        console.error(`  [FAIL] Scenario ${scenario.id} (Run ${run}) FAILED: ${scenario.name}`);
         console.error(`    ${outcome.details}`);
       }
       results[scenario.id].details.push(`Run ${run}: ${outcome.details}`);

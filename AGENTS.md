@@ -1,4 +1,4 @@
-# AGENTS.md — Instructions for AI coding agents
+# AGENTS.md: Instructions for AI coding agents
 
 This file tells you (the coding agent) how to work in this repo. Read it fully before you write code. If a rule here conflicts with a chat message, ask which wins.
 

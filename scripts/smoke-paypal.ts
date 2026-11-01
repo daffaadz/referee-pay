@@ -15,12 +15,12 @@ const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 const paypalEnv = process.env.PAYPAL_ENV;
 
 if (paypalEnv !== "sandbox") {
-  console.error("❌ CRITICAL: PAYPAL_ENV must be 'sandbox'. Aborting.");
+  console.error("[ERROR] CRITICAL: PAYPAL_ENV must be 'sandbox'. Aborting.");
   process.exit(1);
 }
 
 if (!clientId || !clientSecret) {
-  console.error("❌ PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is missing in .env");
+  console.error("[ERROR] PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is missing in .env");
   process.exit(1);
 }
 
@@ -50,12 +50,12 @@ function askQuestion(query: string): Promise<string> {
 
 async function runPaypalSmoke() {
   if (paypalEnv !== "sandbox") {
-    console.error("❌ CRITICAL: PAYPAL_ENV must be 'sandbox'. Aborting.");
+    console.error("[ERROR] CRITICAL: PAYPAL_ENV must be 'sandbox'. Aborting.");
     process.exit(1);
   }
 
   if (!clientId || !clientSecret) {
-    console.error("❌ PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is missing in .env");
+    console.error("[ERROR] PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is missing in .env");
     process.exit(1);
   }
 
@@ -94,8 +94,8 @@ async function runPaypalSmoke() {
       (l) => l.rel === "payer-action" || l.rel === "approve"
     )?.href;
 
-    console.log(`✓ Order 1 Created: ${order1Id} (Status: ${order1.status})`);
-    console.log(`👉 Order 1 Approval URL:\n   ${order1ApproveLink}\n`);
+    console.log(`[PASS] Order 1 Created: ${order1Id} (Status: ${order1.status})`);
+    console.log(`> Order 1 Approval URL:\n   ${order1ApproveLink}\n`);
 
     // 2. Create Order 2 for Void path
     console.log("[2/6] Creating Order 2 (Intent: AUTHORIZE, Amount: $30.00 USD)...");
@@ -123,8 +123,8 @@ async function runPaypalSmoke() {
       (l) => l.rel === "payer-action" || l.rel === "approve"
     )?.href;
 
-    console.log(`✓ Order 2 Created: ${order2Id} (Status: ${order2.status})`);
-    console.log(`👉 Order 2 Approval URL:\n   ${order2ApproveLink}\n`);
+    console.log(`[PASS] Order 2 Created: ${order2Id} (Status: ${order2.status})`);
+    console.log(`> Order 2 Approval URL:\n   ${order2ApproveLink}\n`);
 
     console.log("--------------------------------------------------");
     console.log("ACTION REQUIRED IN BROWSER:");
@@ -147,7 +147,7 @@ async function runPaypalSmoke() {
       throw new Error(`Failed to retrieve authorization ID for Order 1: ${JSON.stringify(auth1Result)}`);
     }
     const auth1Id = auth1.id;
-    console.log(`✓ Order 1 Authorized! Authorization ID: ${auth1Id} (Status: ${auth1.status})`);
+    console.log(`[PASS] Order 1 Authorized! Authorization ID: ${auth1Id} (Status: ${auth1.status})`);
 
     // 4. Capture Partial ($20.00 of $50.00) with final_capture: true
     console.log(`\n[4/6] Capturing $20.00 on Authorization 1 (${auth1Id}) with final_capture: true...`);
@@ -164,7 +164,7 @@ async function runPaypalSmoke() {
     });
 
     const captureResult = capture1Response.result;
-    console.log(`✓ Partial Capture Successful! Capture ID: ${captureResult.id} (Status: ${captureResult.status})`);
+    console.log(`[PASS] Partial Capture Successful! Capture ID: ${captureResult.id} (Status: ${captureResult.status})`);
     console.log(`  Amount captured: ${captureResult.amount?.value} ${captureResult.amount?.currencyCode}`);
     console.log(`  Remaining authorization released automatically: final_capture=true`);
 
@@ -181,7 +181,7 @@ async function runPaypalSmoke() {
       throw new Error(`Failed to retrieve authorization ID for Order 2: ${JSON.stringify(auth2Result)}`);
     }
     const auth2Id = auth2.id;
-    console.log(`✓ Order 2 Authorized! Authorization ID: ${auth2Id} (Status: ${auth2.status})`);
+    console.log(`[PASS] Order 2 Authorized! Authorization ID: ${auth2Id} (Status: ${auth2.status})`);
 
     // 6. Void Authorization 2
     console.log(`\n[6/6] Voiding Authorization 2 (${auth2Id})...`);
@@ -190,10 +190,10 @@ async function runPaypalSmoke() {
       paypalRequestId: `referee-smoke-void2-${runId}`,
     });
 
-    console.log(`✓ Authorization 2 Voided! Status Code: ${voidResponse.statusCode || 204}`);
+    console.log(`[PASS] Authorization 2 Voided! Status Code: ${voidResponse.statusCode || 204}`);
 
     console.log("\n==================================================");
-    console.log("       🎉 PAYPAL SMOKE TEST PASSED COMPLETELY!     ");
+    console.log("        PAYPAL SMOKE TEST PASSED COMPLETELY!     ");
     console.log("==================================================");
     console.log("Proved capabilities:");
     console.log(`- Order creation with intent=AUTHORIZE`);
@@ -204,7 +204,7 @@ async function runPaypalSmoke() {
     console.log("Strategy A (Authorize & Capture later) is 100% verified & operational.");
     process.exit(0);
   } catch (err: any) {
-    console.error("\n❌ PayPal Smoke Test Error:", err.message || err);
+    console.error("\n[ERROR] PayPal Smoke Test Error:", err.message || err);
     if (err.result) {
       console.error("PayPal API Response:", JSON.stringify(err.result, null, 2));
     }

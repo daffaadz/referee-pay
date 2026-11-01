@@ -37,7 +37,7 @@ export function generateMockCarrierHtml(record: MockTrackingRecord): string {
 </head>
 <body>
   <div class="container">
-    <div class="badge-sim">📦 Verified Carrier Tracking Portal — Referee Verification</div>
+    <div class="badge-sim">Verified Carrier Tracking Portal: Referee Verification</div>
     <div class="header">
       <div>
         <div id="carrier-name" class="carrier">${record.carrier}</div>
@@ -59,18 +59,18 @@ export function generateMockCarrierHtml(record: MockTrackingRecord): string {
     </div>
     <div class="stepper">
       <div class="step">
-        <div class="step-circle active">✓</div>
+        <div class="step-circle active">1</div>
         <div class="step-title">Label created</div>
       </div>
       <div class="step">
         <div class="step-circle ${record.status === "In transit" || isDelivered ? "active" : ""}">
-          ${record.status === "In transit" || isDelivered ? "✓" : "2"}
+          2
         </div>
         <div class="step-title">In transit</div>
       </div>
       <div class="step">
         <div class="step-circle ${isDelivered ? "active" : ""}">
-          ${isDelivered ? "✓" : "3"}
+          3
         </div>
         <div class="step-title">Delivered</div>
       </div>

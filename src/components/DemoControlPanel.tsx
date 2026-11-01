@@ -32,10 +32,10 @@ export function DemoControlPanel({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update carrier");
-      setFeedback(`✓ Carrier status updated to '${selectedStatus}' for ${trackingNumber}`);
+      setFeedback(`Carrier status updated to '${selectedStatus}' for ${trackingNumber}`);
       if (onActionComplete) onActionComplete();
     } catch (err: any) {
-      setFeedback(`❌ Error: ${err.message}`);
+      setFeedback(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -55,11 +55,11 @@ export function DemoControlPanel({
       if (!res.ok) throw new Error(data.error || "Sweeper failed");
       const count = data.actionsTaken?.length || 0;
       setFeedback(
-        `✓ Sweeper ran: ${data.activeDealsScanned} deals checked, ${count} actions processed.`
+        `Sweeper ran: ${data.activeDealsScanned} deals checked, ${count} actions processed.`
       );
       if (onActionComplete) onActionComplete();
     } catch (err: any) {
-      setFeedback(`❌ Sweeper Error: ${err.message}`);
+      setFeedback(`Sweeper Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -74,12 +74,11 @@ export function DemoControlPanel({
         className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition"
       >
         <div className="flex items-center gap-2.5">
-          <span className="text-sm">🎛️</span>
           <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
             Demo Simulator & Testing Tools
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-            1 day ≈ 60s
+            1 day = 60s
           </span>
         </div>
         <span className="text-xs text-zinc-400 font-medium">
@@ -139,7 +138,7 @@ export function DemoControlPanel({
                 onClick={handleRunSweeper}
                 className="w-full py-1.5 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-medium transition disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
-                <span>⚡ Run Background Sweeper</span>
+                <span>Run Background Sweeper</span>
               </button>
             </div>
           </div>
