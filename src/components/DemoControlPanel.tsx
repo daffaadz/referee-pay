@@ -74,7 +74,7 @@ export function DemoControlPanel({
   };
 
   return (
-    <div className="rounded-lg border border-border bg-surface shadow-card overflow-hidden">
+    <div className="rounded-lg border border-border bg-surface shadow-card overflow-hidden shrink-0">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}

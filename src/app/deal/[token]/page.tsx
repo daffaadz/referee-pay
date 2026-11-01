@@ -350,11 +350,12 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
   const statusInfo = mapDealStatus(deal.status);
 
   return (
-    <div className="flex-1 md:min-h-0 flex flex-col md:flex-row gap-6 max-w-[1200px] w-full mx-auto p-4 sm:p-6 md:p-8 md:overflow-hidden">
-      {/* LEFT PANE: Header, role actions, timeline, testing tools */}
-      <div className="w-full md:w-5/12 flex flex-col gap-6 md:overflow-y-auto md:pr-2 md:min-h-0">
-        {/* Deal Header Card */}
-        <Card className="space-y-4">
+    <div className="w-full max-w-[1200px] mx-auto p-4 sm:p-6 md:p-8 flex-1 min-h-0 md:h-full md:overflow-hidden flex flex-col justify-start">
+      <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0 md:h-full md:overflow-hidden">
+        {/* LEFT PANE: Header, role actions, demo tools, timeline */}
+        <div className="w-full md:w-5/12 flex flex-col gap-4 md:gap-6 md:h-full md:overflow-y-auto min-h-0 md:pr-2">
+          {/* Deal Header Card */}
+        <Card className="space-y-4 shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -400,7 +401,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
         </Card>
 
         {/* PRIMARY ACTION CARD (Current Step) */}
-        <Card className="space-y-4">
+        <Card className="space-y-4 shrink-0">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
               Current step
@@ -614,8 +615,17 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
           )}
         </Card>
 
+        {/* Collapsible Demo Control Panel */}
+        <DemoControlPanel
+          trackingNumber={
+            (events.find((e) => e.type === "SHIPMENT_ADDED")?.payload as any)?.trackingNumber ||
+            trackingNumber
+          }
+          onActionComplete={reloadDeal}
+        />
+
         {/* Activity Timeline Card */}
-        <Card className="space-y-4">
+        <Card className="space-y-4 shrink-0">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-600 border-b border-border pb-3">
             Activity timeline
           </h2>
@@ -641,20 +651,11 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
             ))}
           </div>
         </Card>
-
-        {/* Collapsible Demo Control Panel */}
-        <DemoControlPanel
-          trackingNumber={
-            (events.find((e) => e.type === "SHIPMENT_ADDED")?.payload as any)?.trackingNumber ||
-            trackingNumber
-          }
-          onActionComplete={reloadDeal}
-        />
       </div>
 
       {/* RIGHT PANE: Tabs for Evidence, Decisions, Terms */}
-      <div className="w-full md:w-7/12 flex flex-col md:overflow-hidden md:min-h-0">
-        <Card className="flex flex-col md:h-full md:overflow-hidden md:min-h-0 p-4 sm:p-6">
+      <div className="w-full md:w-7/12 flex flex-col md:h-full md:overflow-hidden min-h-0">
+        <Card className="flex flex-col h-full md:overflow-hidden min-h-0 p-4 sm:p-6">
           {/* Tab Bar */}
           <div className="flex items-center gap-2 border-b border-border pb-3 shrink-0" role="tablist">
             <button
@@ -839,5 +840,6 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
         </Card>
       </div>
     </div>
-  );
+  </div>
+);
 }
