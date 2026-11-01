@@ -58,6 +58,14 @@ When you implement something, reference the requirement id in the commit message
 - Prefer small pure functions for domain logic and the Policy Engine so they are easy to test.
 - Errors: return typed error responses; never leak stack traces or secrets to the client.
 - UI: mobile-first, accessible labels, clear role-specific actions. Keep it simple; 3 screens only.
+
+### 4.1 UI rules
+- `DESIGN.md` is the single source of truth for colors, fonts, spacing, radius, layout, components, icons, and copy. Follow it exactly.
+- Light theme only. Use role tokens (pine primary, saffron for money, tinted neutrals). No blue, cyan, neon, gradients, or glows.
+- Fonts: Young Serif (h1/h2, large amounts) and Hanken Grotesk (UI/body). Tabular numbers on all amounts and days.
+- Icons: Phosphor only (`@phosphor-icons/react/dist/ssr`). No emoji, no em dash, no en dash, and no arrow characters in any UI string, comment, or file in `src`.
+- No native controls: use Radix UI primitives and custom controls for steppers, selects, checkboxes, radios, scrollbars, and tooltips (no `title` attributes).
+
 - Commits: small, imperative, include requirement id (e.g. `feat(FR-3): authorize order after buyer approval`).
 
 ## 5. Commands (fill in exact scripts during setup)

@@ -1,11 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
+import { CaretDown, CaretUp, FastForward, Truck } from "@phosphor-icons/react/dist/ssr";
+import { Button } from "@/components/ui/Button";
+import { Select } from "@/components/ui/Select";
 
 export interface DemoControlPanelProps {
   trackingNumber?: string;
   onActionComplete?: () => void;
 }
+
+const CARRIER_STATUS_OPTIONS = [
+  { value: "In transit", label: "In transit" },
+  { value: "Delivered", label: "Delivered (Fulfill deal)" },
+  { value: "Returned", label: "Returned to sender" },
+  { value: "Label created", label: "Label created" },
+];
 
 export function DemoControlPanel({
   trackingNumber = "MCK-123456",
@@ -14,9 +24,7 @@ export function DemoControlPanel({
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<
-    "Label created" | "In transit" | "Delivered" | "Returned"
-  >("Delivered");
+  const [selectedStatus, setSelectedStatus] = useState("Delivered");
 
   const handleUpdateCarrier = async () => {
     setLoading(true);
@@ -59,92 +67,93 @@ export function DemoControlPanel({
       );
       if (onActionComplete) onActionComplete();
     } catch (err: any) {
-      setFeedback(`Sweeper Error: ${err.message}`);
+      setFeedback(`Sweeper error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs overflow-hidden transition-all">
-      {/* Header / Toggle Bar */}
+    <div className="rounded-lg border border-border bg-surface shadow-card overflow-hidden">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition"
+        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-neutral-50 transition cursor-pointer"
+        aria-expanded={expanded}
       >
-        <div className="flex items-center gap-2.5">
-          <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-            Demo Simulator & Testing Tools
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-neutral-900">
+            Demo simulator and testing tools
           </span>
-          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-100 text-neutral-700 tabular-nums">
             1 day = 60s
           </span>
         </div>
-        <span className="text-xs text-zinc-400 font-medium">
-          {expanded ? "Hide Tools ▲" : "Show Testing Tools ▼"}
-        </span>
+        <div className="flex items-center gap-1 text-xs text-neutral-600 font-medium">
+          <span>{expanded ? "Hide tools" : "Show testing tools"}</span>
+          {expanded ? <CaretUp size={14} weight="bold" /> : <CaretDown size={14} weight="bold" />}
+        </div>
       </button>
 
-      {/* Expanded Controls */}
       {expanded && (
-        <div className="p-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-3 bg-zinc-50/50 dark:bg-zinc-950/50">
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-            Use these controls to simulate real-world events (carrier package delivery, time elapsing) without waiting days.
+        <div className="p-4 pt-3 border-t border-border space-y-3 bg-neutral-50">
+          <p className="text-xs text-neutral-600">
+            Simulate real world events such as carrier delivery or time elapsing without waiting days.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* 1. Carrier Status */}
-            <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2">
-              <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 block">
-                1. Simulate Carrier Tracking
-              </span>
-              <p className="text-[11px] text-zinc-400">
-                Tracking: <span className="font-mono text-zinc-600 dark:text-zinc-300">{trackingNumber}</span>
+            <div className="p-3.5 rounded-md bg-surface border border-border space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-900">
+                <Truck size={16} weight="bold" className="text-neutral-700" />
+                <span>Simulate carrier tracking</span>
+              </div>
+              <p className="text-[11px] text-neutral-600">
+                Tracking: <span className="font-mono text-neutral-800">{trackingNumber}</span>
               </p>
-              <div className="flex items-center gap-2">
-                <select
+              <div className="space-y-2">
+                <Select
                   value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value as any)}
-                  className="flex-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-2.5 py-1.5 text-xs text-zinc-800 dark:text-zinc-200"
-                >
-                  <option value="In transit">In transit</option>
-                  <option value="Delivered">Delivered (Fulfill Deal)</option>
-                  <option value="Returned">Returned to sender</option>
-                  <option value="Label created">Label created</option>
-                </select>
-                <button
-                  type="button"
-                  disabled={loading}
+                  onValueChange={setSelectedStatus}
+                  options={CARRIER_STATUS_OPTIONS}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={loading}
                   onClick={handleUpdateCarrier}
-                  className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-medium transition disabled:opacity-50"
+                  className="w-full"
                 >
-                  Apply
-                </button>
+                  Apply status
+                </Button>
               </div>
             </div>
 
             {/* 2. Fast Forward Sweeper */}
-            <div className="p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2">
-              <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 block">
-                2. Fast-Forward Time Machine
-              </span>
-              <p className="text-[11px] text-zinc-400">
-                Trigger background sweep cron to check inspection windows and auto-release.
-              </p>
-              <button
-                type="button"
-                disabled={loading}
+            <div className="p-3.5 rounded-md bg-surface border border-border space-y-2 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-900">
+                  <FastForward size={16} weight="bold" className="text-neutral-700" />
+                  <span>Time machine sweeper</span>
+                </div>
+                <p className="text-[11px] text-neutral-600 mt-1">
+                  Trigger the background sweep cron to check inspection windows and auto-release payments.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={loading}
                 onClick={handleRunSweeper}
-                className="w-full py-1.5 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-medium transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                className="w-full"
               >
-                <span>Run Background Sweeper</span>
-              </button>
+                Run background sweeper
+              </Button>
             </div>
           </div>
 
           {feedback && (
-            <div className="p-2.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-700 dark:text-zinc-300 font-medium">
+            <div className="p-2.5 rounded-sm bg-neutral-100 text-xs text-neutral-800 font-medium">
               {feedback}
             </div>
           )}

@@ -2,7 +2,7 @@ import { CreateDealForm } from "@/components/CreateDealForm";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen py-6 px-4 sm:px-6 bg-zinc-50 dark:bg-zinc-950">
+    <main className="flex-1 min-h-0 md:h-full md:overflow-hidden flex flex-col bg-bg">
       <CreateDealForm />
     </main>
   );

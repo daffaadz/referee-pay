@@ -1,9 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import type { DealContract } from "@/domain/contract";
+import {
+  Button,
+  Input,
+  Textarea,
+  MoneyField,
+  NumberStepper,
+  Select,
+  Checkbox,
+  RadioGroup,
+  Chip,
+  Card,
+  CardHeader,
+  Toast,
+} from "@/components/ui";
+import {
+  Bicycle,
+  Handbag,
+  Laptop,
+  ArrowRight,
+  Check,
+  Lock,
+  Copy,
+  Wallet,
+  Package,
+  Truck,
+  SealCheck,
+  Tag,
+  UserCircle,
+  EnvelopeSimple,
+  WarningCircle,
+} from "@phosphor-icons/react/dist/ssr";
 
 export function CreateDealForm() {
+  // Form fields
   const [title, setTitle] = useState("Handmade Leather Wallet");
   const [description, setDescription] = useState(
     "Custom vegetable-tanned leather wallet with brass zipper, brown finish."
@@ -20,34 +52,65 @@ export function CreateDealForm() {
   const [returnWindowDays, setReturnWindowDays] = useState(7);
   const [returnShippingPaidBy, setReturnShippingPaidBy] = useState<"buyer" | "seller">("buyer");
 
+  // Validation errors
+  const [errors, setErrors] = useState<{
+    title?: string;
+    amount?: string;
+    sellerEmail?: string;
+    shipDeadlineDays?: string;
+    deliveryDeadlineDays?: string;
+    inspectionWindowDays?: string;
+    returnWindowDays?: string;
+  }>({});
+
   // Drafter AI state
   const [naturalLanguageInput, setNaturalLanguageInput] = useState(
     "Selling handmade leather wallet to Maya for $80. I will ship within 3 days, delivery in 14 days, with a 7-day return policy."
   );
+  const [selectedExample, setSelectedExample] = useState<string | null>(null);
   const [drafting, setDrafting] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [draftSuccess, setDraftSuccess] = useState<string | null>(null);
   const [clarifyingQuestion, setClarifyingQuestion] = useState<string | null>(null);
   const [clarificationAnswer, setClarificationAnswer] = useState("");
-  const [defaultedFields, setDefaultedFields] = useState<string[]>([]);
 
-  // Presets for quick 1-click testing
+  // Deal creation state
+  const [loading, setLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createdDeal, setCreatedDeal] = useState<{
+    dealId: string;
+    sellerUrl: string;
+    buyerUrl: string;
+    contract: DealContract;
+  } | null>(null);
+
+  // Link copy feedback
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
   const presets = [
     {
-      label: "Folding Bike ($80, No Return)",
+      id: "bike",
+      label: "Folding bike, $80, no returns",
+      icon: <Bicycle size={16} weight="regular" />,
       text: "Jual sepeda lipat seharga 80 dolar. Diantar dalam waktu maksimal 10 hari. Tidak bisa return.",
     },
     {
-      label: "Leather Bag ($75, 7d Return)",
+      id: "bag",
+      label: "Leather bag, $75, 7-day returns",
+      icon: <Handbag size={16} weight="regular" />,
       text: "Selling handmade leather bag to Maya for $75. Ship in 3 days, delivery in 14 days, 7 day return window.",
     },
     {
-      label: "Laptop ($450, High Value)",
+      id: "laptop",
+      label: "Laptop, $450, high value",
+      icon: <Laptop size={16} weight="regular" />,
       text: "Selling ThinkPad laptop for $450 to Alex. Ship within 2 days, 10 days delivery, 3 days inspection period.",
     },
   ];
 
-  const handleApplyPreset = (presetText: string) => {
+  const handleApplyPreset = (presetId: string, presetText: string) => {
+    setSelectedExample(presetId);
     setNaturalLanguageInput(presetText);
     setDraftError(null);
     setDraftSuccess(null);
@@ -58,7 +121,7 @@ export function CreateDealForm() {
     setDrafting(true);
     setDraftError(null);
     setDraftSuccess(null);
-    setError(null);
+    setCreateError(null);
     try {
       const res = await fetch("/api/deals/draft", {
         method: "POST",
@@ -71,7 +134,7 @@ export function CreateDealForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || "Failed to draft deal");
+        throw new Error(data.message || data.error || "We could not read that. Try adding the item, the price and when it will arrive.");
       }
 
       const c = data.contract;
@@ -94,47 +157,67 @@ export function CreateDealForm() {
       }
 
       setClarifyingQuestion(data.clarifyingQuestion || null);
-      setDefaultedFields(data.defaultedFields || []);
-      setDraftSuccess("Agreement terms extracted and filled below!");
-    } catch (err: any) {
+      setDraftSuccess("Terms filled in. Please check them before you continue.");
+      setErrors({});
+    } catch (err: unknown) {
+      const errorObj = err as Error;
       const msg =
-        err.name === "TimeoutError"
+        errorObj.name === "TimeoutError"
           ? "Request timed out after 20s. Please retry."
-          : err.message || "Failed to process terms";
+          : errorObj.message || "We could not read that. Try adding the item, the price and when it will arrive.";
       setDraftError(msg);
     } finally {
       setDrafting(false);
     }
   };
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [createdDeal, setCreatedDeal] = useState<{
-    dealId: string;
-    sellerUrl: string;
-    buyerUrl: string;
-    contract: DealContract;
-  } | null>(null);
+  const validate = () => {
+    const errs: typeof errors = {};
+    if (!title.trim()) {
+      errs.title = "Add an item name.";
+    }
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      errs.amount = "Enter a price above zero.";
+    }
+    if (!sellerEmail.trim() || !sellerEmail.includes("@")) {
+      errs.sellerEmail = "Enter a valid PayPal email.";
+    }
+    if (shipDeadlineDays < 1 || shipDeadlineDays > 60) {
+      errs.shipDeadlineDays = "Choose a number of days between 1 and 60.";
+    }
+    if (deliveryDeadlineDays < 1 || deliveryDeadlineDays > 60) {
+      errs.deliveryDeadlineDays = "Choose a number of days between 1 and 60.";
+    }
+    if (inspectionWindowDays < 1 || inspectionWindowDays > 60) {
+      errs.inspectionWindowDays = "Choose a number of days between 1 and 60.";
+    }
+    if (returnAllowed && (returnWindowDays < 1 || returnWindowDays > 60)) {
+      errs.returnWindowDays = "Choose a number of days between 1 and 60.";
+    }
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!validate()) return;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     setLoading(true);
-    setError(null);
+    setCreateError(null);
 
     const payload = {
       item: {
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         price: { amount, currency },
       },
       seller: {
-        displayName: sellerName,
-        paypalEmail: sellerEmail,
+        displayName: sellerName.trim(),
+        paypalEmail: sellerEmail.trim(),
       },
       buyer: {
-        displayName: buyerName || undefined,
+        displayName: buyerName.trim() || undefined,
       },
       terms: {
         shipDeadlineDays: Number(shipDeadlineDays),
@@ -142,7 +225,7 @@ export function CreateDealForm() {
         inspectionWindowDays: Number(inspectionWindowDays),
         returnPolicy: {
           allowed: returnAllowed,
-          windowDays: Number(returnWindowDays),
+          windowDays: returnAllowed ? Number(returnWindowDays) : 0,
           returnShippingPaidBy,
         },
         autoReleaseAfterInspection: true,
@@ -162,8 +245,10 @@ export function CreateDealForm() {
       }
 
       setCreatedDeal(data);
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+      setToastMessage("Your deal is ready. Links generated.");
+    } catch (err: unknown) {
+      const errorObj = err as Error;
+      setCreateError(errorObj.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -172,478 +257,515 @@ export function CreateDealForm() {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     setCopiedLink(label);
+    setToastMessage("Link copied to clipboard.");
     setTimeout(() => setCopiedLink(null), 2500);
   };
 
+  const formattedAmount = `${currency === "USD" ? "$" : currency + " "}${parseFloat(amount || "0").toFixed(2)}`;
+
+  const summarySentence = `The buyer pays ${formattedAmount}. You are paid after delivery is confirmed and the ${inspectionWindowDays}-day review ends. If you do not ship within ${shipDeadlineDays} days, the buyer is refunded.`;
+
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-8 space-y-8">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-          New Escrow Agreement
-        </h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Lock terms, hold buyer funds in PayPal escrow, and verify delivery automatically before releasing payment.
-        </p>
-      </div>
-
-      {error && (
-        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-200 text-sm">
-          {error}
-        </div>
-      )}
-
-      {/* SUCCESS SCREEN */}
-      {createdDeal ? (
-        <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8 space-y-6 shadow-sm">
-          <div className="flex items-center gap-3 pb-4 border-b border-zinc-100 dark:border-zinc-800">
-            <div className="h-10 w-10 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-bold text-xs">
-              OK
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                Deal Created & Ready
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Item: {createdDeal.contract.item.title} ({createdDeal.contract.item.price.amount} {createdDeal.contract.item.price.currency})
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {/* Step 1: Buyer Link */}
-            <div className="p-5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                  Step 1: Share with Buyer ({buyerName || "Buyer"})
-                </span>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(createdDeal.buyerUrl, "buyer")}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-medium hover:opacity-90 transition"
-                >
-                  {copiedLink === "buyer" ? "Copied" : "Copy Buyer Link"}
-                </button>
-              </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Send this link to the buyer. They will open it to review terms and fund the escrow via PayPal.
-              </p>
-              <div>
-                <a
-                  href={createdDeal.buyerUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-900 dark:text-zinc-100 hover:underline"
-                >
-                  Open Buyer View (To test payment) &rarr;
-                </a>
-              </div>
-            </div>
-
-            {/* Step 2: Seller Link */}
-            <div className="p-5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                  Step 2: Save Your Seller Link ({sellerName || "Seller"})
-                </span>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(createdDeal.sellerUrl, "seller")}
-                  className="text-xs px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
-                >
-                  {copiedLink === "seller" ? "Copied" : "Copy Seller Link"}
-                </button>
-              </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Keep this link to track buyer authorization and submit tracking numbers once shipped.
-              </p>
-              <div>
-                <a
-                  href={createdDeal.sellerUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-900 dark:text-zinc-100 hover:underline"
-                >
-                  Open Seller Dashboard &rarr;
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => setCreatedDeal(null)}
-              className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition"
-            >
-              &larr; Create another agreement
-            </button>
-          </div>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* AI DRAFTER CARD */}
-          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  AI Deal Drafter
-                </span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
-                  Natural Language
-                </span>
-              </div>
-              <span className="text-[11px] text-zinc-400">Gemini Powered</span>
-            </div>
-
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Type or paste your agreement terms. The AI will extract the item, price, deadlines, and return policy automatically.
+    <div className="w-full max-w-[1200px] mx-auto p-4 sm:p-6 lg:p-8 flex-1 min-h-0 md:h-full md:overflow-hidden flex flex-col justify-start">
+      {/* Two-Pane Shell */}
+      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 flex-1 min-h-0 md:h-full md:overflow-hidden">
+        {/* LEFT PANE (5/12) */}
+        <div className="w-full md:w-5/12 flex flex-col gap-4 md:h-full md:overflow-y-auto min-h-0 pr-1">
+          {/* Page Top Heading */}
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-serif text-neutral-900 tracking-tight">
+              Start a protected deal
+            </h1>
+            <p className="text-sm text-neutral-600 leading-relaxed">
+              Describe what you are selling. Referee holds the buyer payment and releases it only after delivery is confirmed.
             </p>
+          </div>
 
-            {/* Presets */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[11px] font-medium text-zinc-400 mr-1">Presets:</span>
-              {presets.map((p, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleApplyPreset(p.text)}
-                  className="text-[11px] px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-300 dark:hover:border-zinc-700 transition"
-                >
-                  {p.label}
-                </button>
-              ))}
+          {/* Step 1 Card: Describe your deal */}
+          <Card className="flex flex-col gap-4">
+            <CardHeader
+              title="Describe your deal"
+              subtitle="Write it like a message to your buyer. We turn it into clear terms you can edit."
+            />
+
+            {/* Example chips */}
+            <div className="space-y-2">
+              <span className="text-xs font-medium text-neutral-600">Try an example</span>
+              <div className="flex flex-wrap gap-2">
+                {presets.map((preset) => (
+                  <Chip
+                    key={preset.id}
+                    icon={preset.icon}
+                    selected={selectedExample === preset.id}
+                    onClick={() => handleApplyPreset(preset.id, preset.text)}
+                  >
+                    {preset.label}
+                  </Chip>
+                ))}
+              </div>
             </div>
 
+            {/* Natural language description */}
             <div className="space-y-2">
-              <textarea
-                rows={3}
+              <Textarea
                 value={naturalLanguageInput}
                 onChange={(e) => setNaturalLanguageInput(e.target.value)}
-                placeholder="e.g. Jual sepeda lipat seharga 80 dolar. Diantar dalam waktu maksimal 10 hari. Tidak bisa return..."
-                className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/60 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:bg-white dark:focus:bg-zinc-950 transition"
+                placeholder="Example: I am selling a handmade leather wallet to Maya for $80. I will ship within 3 days. It should arrive within 14 days. She can return it within 7 days."
+                minRows={3}
+                maxRows={5}
+                aria-label="Describe your deal text"
               />
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-zinc-400">
-                  Accepts English, Indonesian, and other languages
-                </span>
-                <button
-                  type="button"
-                  onClick={handleDraftWithAi}
-                  disabled={drafting || !naturalLanguageInput.trim()}
-                  className="px-4 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium text-xs shadow-sm hover:opacity-90 disabled:opacity-50 transition flex items-center gap-1.5"
-                >
-                  {drafting ? (
-                    <>
-                      <span className="inline-block animate-spin text-xs">⏳</span>
-                      <span>Extracting terms (~1s)...</span>
-                    </>
-                  ) : (
-                    "Draft with AI →"
-                  )}
-                </button>
-              </div>
             </div>
 
-            {/* Success Feedback */}
+            {/* Clarifying question if proposed by drafter */}
+            {clarifyingQuestion && (
+              <div className="p-3 bg-warning-50 border border-warning-100 rounded-sm space-y-2">
+                <p className="text-xs font-medium text-warning-700">{clarifyingQuestion}</p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Your answer"
+                    value={clarificationAnswer}
+                    onChange={(e) => setClarificationAnswer(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleDraftWithAi}
+                    loading={drafting}
+                  >
+                    Update
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Draft button */}
+            <div className="flex flex-col gap-2 pt-1">
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleDraftWithAi}
+                loading={drafting}
+                icon={<ArrowRight size={18} weight="bold" />}
+                className="w-full"
+              >
+                {drafting ? "Reading your description" : "Fill in the terms"}
+              </Button>
+
+              <span className="text-xs text-neutral-500 text-center">
+                Works in English, Indonesian and other languages.
+              </span>
+            </div>
+
+            {/* Feedback notices */}
             {draftSuccess && (
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-emerald-200 dark:border-emerald-900/50 text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                <span className="font-semibold text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/80">OK</span>
+              <div className="flex items-center gap-2 p-2.5 bg-success-50 border border-success-100 rounded-sm text-xs font-medium text-success-700">
+                <Check size={16} weight="bold" className="shrink-0" />
                 <span>{draftSuccess}</span>
               </div>
             )}
-
-            {/* Error Feedback */}
             {draftError && (
-              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2">
-                <span className="font-semibold text-[10px] px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950/80">ERR</span>
+              <div className="flex items-center gap-2 p-2.5 bg-danger-50 border border-danger-100 rounded-sm text-xs font-medium text-danger-700">
+                <WarningCircle size={16} weight="bold" className="shrink-0" />
                 <span>{draftError}</span>
               </div>
             )}
+          </Card>
 
-            {/* Clarification prompt if asked */}
-            {clarifyingQuestion && (
-              <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-800 dark:text-zinc-200 space-y-2">
-                <p className="font-medium">Clarifying question from AI:</p>
-                <p className="text-zinc-600 dark:text-zinc-400">{clarifyingQuestion}</p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={clarificationAnswer}
-                    onChange={(e) => setClarificationAnswer(e.target.value)}
-                    placeholder="Type your clarification..."
-                    className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleDraftWithAi}
-                    className="px-3 py-1.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-lg font-medium text-xs"
-                  >
-                    Submit
-                  </button>
+          {/* Compact How It Works Card (4 steps) */}
+          <Card className="bg-neutral-50/70 border-neutral-200">
+            <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500 block mb-3">
+              How it works
+            </span>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="h-7 w-7 rounded-full bg-white border border-neutral-300 flex items-center justify-center text-primary-700 shrink-0">
+                  <Wallet size={16} weight="bold" />
                 </div>
+                <p className="text-xs text-neutral-700 leading-snug pt-1">
+                  Buyer pays. The payment is held, not sent.
+                </p>
               </div>
-            )}
 
-            {defaultedFields.length > 0 && (
-              <p className="text-[11px] text-zinc-400">
-                Applied default standards for: {defaultedFields.join(", ")}
-              </p>
-            )}
-          </div>
+              <div className="flex items-start gap-3">
+                <div className="h-7 w-7 rounded-full bg-white border border-neutral-300 flex items-center justify-center text-primary-700 shrink-0">
+                  <Package size={16} weight="bold" />
+                </div>
+                <p className="text-xs text-neutral-700 leading-snug pt-1">
+                  You ship and add the tracking number.
+                </p>
+              </div>
 
-          {/* STRUCTURED AGREEMENT FORM */}
-          <div className="space-y-6">
-            {/* 1. Item & Price */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 border-b border-zinc-100 dark:border-zinc-800 pb-2">
-                1. Item & Price
-              </h2>
+              <div className="flex items-start gap-3">
+                <div className="h-7 w-7 rounded-full bg-white border border-neutral-300 flex items-center justify-center text-primary-700 shrink-0">
+                  <Truck size={16} weight="bold" />
+                </div>
+                <p className="text-xs text-neutral-700 leading-snug pt-1">
+                  Referee checks the delivery on the carrier page.
+                </p>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Item Title
-                  </label>
-                  <input
-                    type="text"
-                    required
+              <div className="flex items-start gap-3">
+                <div className="h-7 w-7 rounded-full bg-white border border-neutral-300 flex items-center justify-center text-primary-700 shrink-0">
+                  <SealCheck size={16} weight="bold" />
+                </div>
+                <p className="text-xs text-neutral-700 leading-snug pt-1">
+                  You get paid when delivery is confirmed.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* RIGHT PANE (7/12) */}
+        <div className="w-full md:w-7/12 flex flex-col md:h-full min-h-0 md:overflow-hidden">
+          {!createdDeal ? (
+            /* STEP 2: REVIEW THE TERMS */
+            <Card className="flex flex-col h-full min-h-0 overflow-hidden">
+              <CardHeader
+                title="Review the terms"
+                subtitle="Check the details extracted from your description before creating the escrow deal."
+              />
+
+              {createError && (
+                <div className="mb-3 flex items-center gap-2 p-3 bg-danger-50 border border-danger-100 rounded-sm text-xs font-medium text-danger-700">
+                  <WarningCircle size={16} weight="bold" className="shrink-0" />
+                  <span>{createError}</span>
+                </div>
+              )}
+
+              {/* Scrollable fields container */}
+              <form
+                id="create-deal-form"
+                onSubmit={handleSubmit}
+                className="flex-1 overflow-y-auto space-y-5 pr-2"
+              >
+                {/* Group 1: What is being sold */}
+                <div className="space-y-3 p-3.5 bg-neutral-50 rounded-sm border border-neutral-200">
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    What is being sold
+                  </h3>
+
+                  <Input
+                    label="Item name"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Sepeda Lipat"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 focus:bg-white dark:focus:bg-zinc-900 transition"
+                    error={errors.title}
+                    placeholder="Handmade leather wallet"
+                    iconPrefix={<Tag size={16} />}
                   />
-                </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Price Amount ({currency})
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      required
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <MoneyField
+                      label="Price"
+                      currency={currency}
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="80.00"
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 focus:bg-white dark:focus:bg-zinc-900 transition font-medium"
+                      onChange={setAmount}
+                      error={errors.amount}
                     />
-                    <select
+
+                    <Select
+                      label="Currency"
                       value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className="px-2 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                      <option value="GBP">GBP</option>
-                    </select>
+                      onValueChange={setCurrency}
+                      options={[
+                        { value: "USD", label: "USD", sublabel: "US Dollar" },
+                        { value: "EUR", label: "EUR", sublabel: "Euro" },
+                        { value: "GBP", label: "GBP", sublabel: "British Pound" },
+                      ]}
+                    />
                   </div>
-                </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Item Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Condition, model, color, or specific notes..."
-                  className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 focus:bg-white dark:focus:bg-zinc-900 transition"
-                />
-              </div>
-            </div>
-
-            {/* 2. Participants */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 border-b border-zinc-100 dark:border-zinc-800 pb-2">
-                2. Participants
-              </h2>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Seller Name
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={sellerName}
-                    onChange={(e) => setSellerName(e.target.value)}
-                    placeholder="Sari"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 focus:bg-white dark:focus:bg-zinc-900 transition"
+                  <Textarea
+                    label="Description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    helperText="The buyer sees this before paying."
+                    minRows={2}
+                    maxRows={3}
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Seller PayPal Sandbox Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={sellerEmail}
-                    onChange={(e) => setSellerEmail(e.target.value)}
-                    placeholder="seller@example.com"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 focus:bg-white dark:focus:bg-zinc-900 transition"
-                  />
-                  <p className="text-[11px] text-zinc-400">
-                    Escrow payouts will be directed to this account
-                  </p>
-                </div>
+                {/* Group 2: Who is involved */}
+                <div className="space-y-3 p-3.5 bg-neutral-50 rounded-sm border border-neutral-200">
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    Who is involved
+                  </h3>
 
-                <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Buyer Name (Optional)
-                  </label>
-                  <input
-                    type="text"
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      label="Your name"
+                      value={sellerName}
+                      onChange={(e) => setSellerName(e.target.value)}
+                      placeholder="Your name"
+                      iconPrefix={<UserCircle size={16} />}
+                    />
+
+                    <Input
+                      label="Your PayPal email"
+                      type="email"
+                      value={sellerEmail}
+                      onChange={(e) => setSellerEmail(e.target.value)}
+                      error={errors.sellerEmail}
+                      helperText="You are paid here after delivery is confirmed."
+                      iconPrefix={<EnvelopeSimple size={16} />}
+                    />
+                  </div>
+
+                  <Input
+                    label="Buyer name (optional)"
                     value={buyerName}
                     onChange={(e) => setBuyerName(e.target.value)}
-                    placeholder="Maya"
-                    className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 focus:bg-white dark:focus:bg-zinc-900 transition"
+                    placeholder="Buyer name"
+                    iconPrefix={<UserCircle size={16} />}
                   />
                 </div>
-              </div>
-            </div>
 
-            {/* 3. Escrow Deadlines & Rules */}
-            <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-sm">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 border-b border-zinc-100 dark:border-zinc-800 pb-2">
-                3. Fulfillment & Protection Rules
-              </h2>
+                {/* Group 3: Timing and protection */}
+                <div className="space-y-3 p-3.5 bg-neutral-50 rounded-sm border border-neutral-200">
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    Timing and protection
+                  </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Shipping Window
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
-                      min={1}
-                      max={30}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <NumberStepper
+                      label="Ship within"
+                      unitSuffix="days"
                       value={shipDeadlineDays}
-                      onChange={(e) => setShipDeadlineDays(Number(e.target.value))}
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50"
-                    />
-                    <span className="text-xs text-zinc-400">days</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400">Auto-refund if seller fails to ship</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Delivery Verification
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
                       min={1}
                       max={60}
+                      onChange={setShipDeadlineDays}
+                      error={errors.shipDeadlineDays}
+                      helperText="Add tracking by this deadline or the buyer is refunded."
+                    />
+
+                    <NumberStepper
+                      label="Arrive within"
+                      unitSuffix="days"
                       value={deliveryDeadlineDays}
-                      onChange={(e) => setDeliveryDeadlineDays(Number(e.target.value))}
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50"
-                    />
-                    <span className="text-xs text-zinc-400">days</span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400">Carrier tracking verification</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    Buyer Inspection
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
                       min={1}
-                      max={14}
-                      value={inspectionWindowDays}
-                      onChange={(e) => setInspectionWindowDays(Number(e.target.value))}
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50"
+                      max={60}
+                      onChange={setDeliveryDeadlineDays}
+                      error={errors.deliveryDeadlineDays}
+                      helperText="Delivery must be confirmed by this deadline."
                     />
-                    <span className="text-xs text-zinc-400">days</span>
+
+                    <NumberStepper
+                      label="Buyer review period"
+                      unitSuffix="days"
+                      value={inspectionWindowDays}
+                      min={1}
+                      max={60}
+                      onChange={setInspectionWindowDays}
+                      error={errors.inspectionWindowDays}
+                      helperText="The buyer can report a problem. After this, payment is released."
+                    />
                   </div>
-                  <p className="text-[11px] text-zinc-400">Auto-releases if no dispute</p>
-                </div>
-              </div>
 
-              {/* Returns Policy */}
-              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="returnsAllowed"
-                    checked={returnAllowed}
-                    onChange={(e) => setReturnAllowed(e.target.checked)}
-                    className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 dark:border-zinc-700"
-                  />
-                  <label htmlFor="returnsAllowed" className="text-xs font-medium text-zinc-800 dark:text-zinc-200">
-                    Returns Allowed
-                  </label>
-                </div>
+                  <div className="pt-2 border-t border-neutral-200 space-y-3">
+                    <Checkbox
+                      label="Accept returns"
+                      helperText="The buyer can return the item for a refund."
+                      checked={returnAllowed}
+                      onCheckedChange={setReturnAllowed}
+                    />
 
-                {returnAllowed && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-6">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                        Return Window
-                      </label>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min={0}
-                          max={30}
+                    {returnAllowed && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-8">
+                        <NumberStepper
+                          label="Return window"
+                          unitSuffix="days"
                           value={returnWindowDays}
-                          onChange={(e) => setReturnWindowDays(Number(e.target.value))}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50"
+                          min={1}
+                          max={60}
+                          onChange={setReturnWindowDays}
+                          error={errors.returnWindowDays}
+                          helperText="Days to request a return."
                         />
-                        <span className="text-xs text-zinc-400">days</span>
+
+                        <RadioGroup
+                          label="Return shipping paid by"
+                          variant="card"
+                          value={returnShippingPaidBy === "buyer" ? "BUYER" : "SELLER"}
+                          onValueChange={(val) =>
+                            setReturnShippingPaidBy(val === "BUYER" ? "buyer" : "seller")
+                          }
+                          options={[
+                            { value: "BUYER", label: "Buyer" },
+                            { value: "SELLER", label: "Seller" },
+                          ]}
+                        />
                       </div>
+                    )}
+                  </div>
+                </div>
+              </form>
+
+              {/* Sticky Card Footer */}
+              <div className="pt-3 border-t border-border mt-auto shrink-0 bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <p className="text-xs text-neutral-600 leading-snug sm:max-w-md">
+                  {summarySentence}
+                </p>
+
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <Button
+                    type="submit"
+                    form="create-deal-form"
+                    variant="primary"
+                    loading={loading}
+                    className="w-full sm:w-auto"
+                  >
+                    {loading ? "Creating deal..." : `Create deal for ${formattedAmount}`}
+                  </Button>
+                  <span className="text-[11px] text-neutral-500 hidden sm:inline">
+                    You get two links: one for you and one to send to the buyer.
+                  </span>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            /* STEP 3: SUCCESS STATE (REPLACES RIGHT CARD IN PLACE) */
+            <Card className="flex flex-col h-full min-h-0 justify-between">
+              <div>
+                <CardHeader
+                  title="Your deal is ready"
+                  subtitle={`Item: ${createdDeal.contract.item.title} (${createdDeal.contract.item.price.amount} ${createdDeal.contract.item.price.currency})`}
+                />
+
+                <div className="space-y-4 mt-4">
+                  {/* Your Link (Seller) */}
+                  <div className="p-4 bg-neutral-50 rounded-sm border border-neutral-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-900">
+                        <Lock size={14} weight="bold" className="text-neutral-700" />
+                        <span>Your link</span>
+                      </div>
+                      <span className="text-[11px] text-neutral-500">
+                        Keep this private. You use it to add tracking.
+                      </span>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                        Return Shipping Paid By
-                      </label>
-                      <select
-                        value={returnShippingPaidBy}
-                        onChange={(e) => setReturnShippingPaidBy(e.target.value as "buyer" | "seller")}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300"
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={createdDeal.sellerUrl}
+                        className="h-10 w-full bg-white text-xs text-neutral-800 rounded-sm border border-neutral-300 px-3 outline-none"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => copyToClipboard(createdDeal.sellerUrl, "seller")}
+                        icon={
+                          copiedLink === "seller" ? (
+                            <Check size={14} weight="bold" className="text-success-700" />
+                          ) : (
+                            <Copy size={14} weight="regular" />
+                          )
+                        }
                       >
-                        <option value="buyer">Buyer</option>
-                        <option value="seller">Seller</option>
-                      </select>
+                        {copiedLink === "seller" ? "Copied" : "Copy"}
+                      </Button>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* Escrow summary banner */}
-            <div className="p-4 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 text-xs text-zinc-600 dark:text-zinc-400 flex items-start gap-2.5">
-              <span className="font-semibold text-[10px] px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 mt-0.5">SECURE</span>
-              <div>
-                <p className="font-medium text-zinc-900 dark:text-zinc-200">
-                  Automated Escrow Protection
-                </p>
-                <p className="text-[11px] mt-0.5">
-                  Buyer authorizes {amount} {currency} on PayPal Sandbox. Funds stay safely held until delivery is verified via tracking. If the seller does not ship in {shipDeadlineDays} days, the hold is automatically voided and refunded.
-                </p>
-              </div>
-            </div>
+                  {/* Buyer Link */}
+                  <div className="p-4 bg-neutral-50 rounded-sm border border-neutral-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-neutral-900">
+                        <span>Buyer link</span>
+                      </div>
+                      <span className="text-[11px] text-neutral-500">
+                        Send this to the buyer so they can pay.
+                      </span>
+                    </div>
 
-            {/* SUBMIT BUTTON */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 rounded-xl bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold text-sm shadow transition disabled:opacity-50"
-            >
-              {loading ? "Creating Agreement..." : `Create Escrow Deal (${amount} ${currency}) →`}
-            </button>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        value={createdDeal.buyerUrl}
+                        className="h-10 w-full bg-white text-xs text-neutral-800 rounded-sm border border-neutral-300 px-3 outline-none"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => copyToClipboard(createdDeal.buyerUrl, "buyer")}
+                        icon={
+                          copiedLink === "buyer" ? (
+                            <Check size={14} weight="bold" className="text-success-700" />
+                          ) : (
+                            <Copy size={14} weight="regular" />
+                          )
+                        }
+                      >
+                        {copiedLink === "buyer" ? "Copied" : "Copy"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Success Bottom Actions */}
+              <div className="pt-4 border-t border-border flex items-center justify-between gap-3 mt-6">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setCreatedDeal(null);
+                    setErrors({});
+                  }}
+                >
+                  Create another deal
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => {
+                    window.location.href = createdDeal.sellerUrl;
+                  }}
+                  icon={<ArrowRight size={16} weight="bold" />}
+                >
+                  Open deal room
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Mobile Sticky Action Bar (< 768px) */}
+      {!createdDeal && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 p-3 bg-surface border-t border-border flex items-center justify-between gap-3 shadow-menu z-30">
+          <div>
+            <span className="text-xs text-neutral-500 block">Total</span>
+            <span className="text-base font-serif text-neutral-900 font-bold tabular-nums">
+              {formattedAmount}
+            </span>
           </div>
-        </form>
+          <Button
+            type="button"
+            variant="primary"
+            loading={loading}
+            onClick={() => handleSubmit()}
+          >
+            Create deal
+          </Button>
+        </div>
+      )}
+
+      {/* Global Toast */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          type="success"
+          onClose={() => setToastMessage(null)}
+        />
       )}
     </div>
   );

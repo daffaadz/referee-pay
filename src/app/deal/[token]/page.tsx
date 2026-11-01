@@ -1,8 +1,27 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
+import {
+  ArrowSquareOut,
+  CheckCircle,
+  FileText,
+  Lock,
+  Package,
+  Receipt,
+  Scales,
+  ShieldCheck,
+  Truck,
+  User,
+  WarningCircle,
+} from "@phosphor-icons/react/dist/ssr";
 import { DecisionLog } from "@/components/DecisionLog";
 import { DemoControlPanel } from "@/components/DemoControlPanel";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { Select } from "@/components/ui/Select";
+import { StatusChip, DealStatusType } from "@/components/ui/StatusChip";
 import type { DealStatus, DealEventType } from "@/domain/state-machine";
 import type { DealContract } from "@/domain/contract";
 import type { Role } from "@/domain/tokens";
@@ -38,63 +57,71 @@ interface DealData {
   decisions?: any[];
 }
 
-const STATUS_BADGES: Record<DealStatus, { label: string; badgeClass: string; description: string }> = {
-  DRAFT: {
-    label: "Draft",
-    badgeClass: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-    description: "Terms are drafted but pending funding.",
-  },
-  AWAITING_PAYMENT: {
-    label: "Payment Required",
-    badgeClass: "bg-amber-100 text-amber-900 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:border-amber-800",
-    description: "Waiting for buyer to authorize funds on PayPal Sandbox.",
-  },
-  FUNDS_HELD: {
-    label: "Funds in Escrow",
-    badgeClass: "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900",
-    description: "Money held safely in PayPal escrow. Seller can now ship.",
-  },
-  SHIPPED: {
-    label: "Shipped / In Transit",
-    badgeClass: "bg-zinc-100 text-zinc-900 border border-zinc-300 dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700",
-    description: "Item shipped. Referee cloud browser is verifying tracking.",
-  },
-  DELIVERED: {
-    label: "Delivered (Inspection Active)",
-    badgeClass: "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
-    description: "Delivered. Buyer has inspection window to review item.",
-  },
-  CLAIM_OPEN: {
-    label: "Under Dispute",
-    badgeClass: "bg-rose-50 text-rose-800 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800",
-    description: "A claim has been opened. Referee AI is reviewing evidence.",
-  },
-  ESCALATED: {
-    label: "Escalated for Review",
-    badgeClass: "bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
-    description: "Escalated for human operator review.",
-  },
-  RELEASED: {
-    label: "Completed & Released",
-    badgeClass: "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/50 dark:text-emerald-200",
-    description: "Funds successfully released to seller.",
-  },
-  REFUNDED: {
-    label: "Refunded to Buyer",
-    badgeClass: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300",
-    description: "Escrow hold cancelled or refunded back to buyer.",
-  },
-  SETTLED: {
-    label: "Settled",
-    badgeClass: "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
-    description: "Partial settlement concluded.",
-  },
-  CANCELLED: {
-    label: "Cancelled",
-    badgeClass: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
-    description: "Deal was cancelled.",
-  },
-};
+const CARRIER_OPTIONS = [
+  { value: "Mock Carrier", label: "Mock Carrier (Demo / Local)" },
+  { value: "USPS", label: "USPS" },
+  { value: "FedEx", label: "FedEx" },
+  { value: "DHL", label: "DHL" },
+];
+
+function mapDealStatus(status: DealStatus): {
+  type: DealStatusType;
+  customLabel?: string;
+  description: string;
+} {
+  switch (status) {
+    case "DRAFT":
+    case "AWAITING_PAYMENT":
+      return {
+        type: "WAITING",
+        description: "Waiting for buyer to authorize payment on PayPal Sandbox.",
+      };
+    case "FUNDS_HELD":
+      return {
+        type: "HELD",
+        description: "Payment held by Referee. Seller can now ship the item.",
+      };
+    case "SHIPPED":
+      return {
+        type: "SHIPPED",
+        description: "Item shipped. Referee is verifying delivery on the carrier page.",
+      };
+    case "DELIVERED":
+      return {
+        type: "DELIVERED",
+        description: "Carrier confirmed delivery. Buyer review period is open.",
+      };
+    case "RELEASED":
+      return {
+        type: "RELEASED",
+        description: "Delivery confirmed. Payment released to seller.",
+      };
+    case "REFUNDED":
+      return {
+        type: "REFUNDED",
+        description: "Escrow hold cancelled. Payment refunded to buyer.",
+      };
+    case "SETTLED":
+      return {
+        type: "RELEASED",
+        customLabel: "Settled",
+        description: "Partial settlement concluded.",
+      };
+    case "CLAIM_OPEN":
+    case "ESCALATED":
+      return {
+        type: "NEEDS_REVIEW",
+        description: "Issue reported. Referee is reviewing evidence.",
+      };
+    case "CANCELLED":
+    default:
+      return {
+        type: "PROBLEM",
+        customLabel: "Cancelled",
+        description: "Deal was cancelled.",
+      };
+  }
+}
 
 function formatEventSummary(type: DealEventType, payload?: Record<string, unknown>): string {
   switch (type) {
@@ -142,6 +169,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"evidence" | "decisions" | "terms">("evidence");
 
   // Form states
   const [carrier, setCarrier] = useState("Mock Carrier");
@@ -204,7 +232,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
         window.open(data.approveUrl, "_blank");
       }
     } catch (err: any) {
-      alert(`Payment Error: ${err.message}`);
+      alert(`Payment error: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -225,7 +253,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
       setCreatedOrderId(null);
       await reloadDeal();
     } catch (err: any) {
-      alert(`Authorization Error: ${err.message}`);
+      alert(`Authorization error: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -245,7 +273,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
       if (!res.ok) throw new Error(data.error || "Failed to add shipment");
       await reloadDeal();
     } catch (err: any) {
-      alert(`Shipping Error: ${err.message}`);
+      alert(`Shipping error: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -266,7 +294,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
       if (!res.ok) throw new Error(data.error || "Failed to confirm receipt");
       await reloadDeal();
     } catch (err: any) {
-      alert(`Confirmation Error: ${err.message}`);
+      alert(`Confirmation error: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -289,7 +317,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
       setShowClaimForm(false);
       await reloadDeal();
     } catch (err: any) {
-      alert(`Claim Error: ${err.message}`);
+      alert(`Claim error: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -297,7 +325,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6 text-zinc-400 text-sm">
+      <div className="flex-1 flex items-center justify-center p-6 text-neutral-600 text-sm">
         <span className="animate-pulse">Loading deal room...</span>
       </div>
     );
@@ -305,411 +333,510 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
 
   if (error || !dealData) {
     return (
-      <div className="max-w-md mx-auto my-16 p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center space-y-3">
-        <div className="h-10 w-10 mx-auto rounded-full bg-rose-50 text-rose-700 flex items-center justify-center font-bold text-xs">
-          ERR
-        </div>
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Deal Not Found</h2>
-        <p className="text-xs text-zinc-500">{error || "Invalid capability link."}</p>
+      <div className="flex-1 flex items-center justify-center p-6">
+        <Card className="max-w-md w-full text-center space-y-3">
+          <div className="h-10 w-10 mx-auto rounded-full bg-danger-50 text-danger-700 flex items-center justify-center">
+            <WarningCircle size={20} weight="bold" />
+          </div>
+          <h2 className="text-base font-semibold text-neutral-900">Deal not found</h2>
+          <p className="text-xs text-neutral-600">{error || "Invalid deal link."}</p>
+        </Card>
       </div>
     );
   }
 
   const { deal, role, events, evidence, payment } = dealData;
   const contract = deal.contract;
-  const badgeInfo = STATUS_BADGES[deal.status] || {
-    label: deal.status,
-    badgeClass: "bg-zinc-100 text-zinc-800",
-    description: "",
-  };
+  const statusInfo = mapDealStatus(deal.status);
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Deal Header */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-1">
+    <div className="flex-1 md:min-h-0 flex flex-col md:flex-row gap-6 max-w-[1200px] w-full mx-auto p-4 sm:p-6 md:p-8 md:overflow-hidden">
+      {/* LEFT PANE: Header, role actions, timeline, testing tools */}
+      <div className="w-full md:w-5/12 flex flex-col gap-6 md:overflow-y-auto md:pr-2 md:min-h-0">
+        {/* Deal Header Card */}
+        <Card className="space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeInfo.badgeClass}`}>
-                  {badgeInfo.label}
-                </span>
-                <span className="text-xs text-zinc-400 font-mono">
+                <StatusChip status={statusInfo.type} customLabel={statusInfo.customLabel} />
+                <span className="text-xs text-neutral-500 font-mono">
                   #{deal.id.slice(0, 12)}
                 </span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              <h1 className="text-xl sm:text-2xl font-serif text-neutral-900 leading-snug">
                 {contract.item.title}
               </h1>
             </div>
 
-            <div className="text-left sm:text-right">
-              <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                {contract.item.price.amount} {contract.item.price.currency}
+            <div className="text-right shrink-0">
+              <div className="text-2xl font-serif text-neutral-900 tabular-nums">
+                {contract.item.price.amount}{" "}
+                <span className="text-base font-sans font-medium text-neutral-600">
+                  {contract.item.price.currency}
+                </span>
               </div>
-              <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                Viewing as: <strong className="capitalize">{role}</strong> ({role === "seller" ? contract.seller.displayName : contract.buyer?.displayName || "Buyer"})
-              </span>
+              <div className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
+                <User size={13} weight="bold" />
+                <span>
+                  Viewing as <strong className="capitalize">{role}</strong>
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Where is the money explanation banner */}
-          <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-start gap-3 text-xs text-zinc-600 dark:text-zinc-400">
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 mt-0.5">STATUS</span>
+          {/* Escrow status banner */}
+          <div className="pt-3 border-t border-border flex items-start gap-2.5 text-xs text-neutral-600">
+            <ShieldCheck size={16} weight="bold" className="text-primary-700 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <strong className="text-zinc-900 dark:text-zinc-200 mr-1.5 font-medium">
-                Escrow Status:
-              </strong>
-              <span>{badgeInfo.description}</span>
+              <strong className="text-neutral-900 font-medium mr-1">Escrow status:</strong>
+              <span>{statusInfo.description}</span>
             </div>
             {payment?.authorizationId && (
-              <span className="hidden sm:inline-block font-mono text-[11px] text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
-                PayPal Auth: {payment.authorizationId.slice(0, 8)}...
+              <span className="hidden sm:inline-block font-mono text-[11px] text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded-sm">
+                Auth {payment.authorizationId.slice(0, 8)}...
               </span>
             )}
           </div>
-        </div>
+        </Card>
 
-        {/* PRIMARY ACTION PANEL (Role-specific call to action) */}
-        <div className="p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-            Current Step
-          </h2>
+        {/* PRIMARY ACTION CARD (Current Step) */}
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between border-b border-border pb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-600">
+              Current step
+            </h2>
+            <span className="text-xs text-neutral-500">
+              {role === "buyer" ? "Buyer actions" : "Seller actions"}
+            </span>
+          </div>
 
-          {/* --- BUYER VIEWS --- */}
+          {/* --- BUYER ACTIONS --- */}
           {role === "buyer" && (
             <div className="space-y-4">
               {deal.status === "AWAITING_PAYMENT" && (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-2">
-                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                      Step 1: Authorize PayPal Escrow Hold
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-neutral-900">
+                      Step 1: Authorize PayPal escrow hold
                     </h3>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                      Click below to open PayPal Sandbox. Log in with your sandbox buyer account and approve the {contract.item.price.amount} {contract.item.price.currency} authorization.
+                    <p className="text-xs text-neutral-600 leading-relaxed">
+                      Click below to open PayPal Sandbox. Log in with your sandbox buyer account and approve the payment hold for {contract.item.price.amount} {contract.item.price.currency}.
                     </p>
-                    <div className="pt-1 flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={handleBuyerCreateOrder}
-                        className="px-5 py-2.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold text-xs transition disabled:opacity-50 flex items-center gap-2"
-                      >
-                        <span>Authorize on PayPal ({contract.item.price.amount} {contract.item.price.currency})</span>
-                      </button>
-
-                      {createdOrderId && (
-                        <button
-                          type="button"
-                          disabled={actionLoading}
-                          onClick={handleBuyerAuthorize}
-                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm transition disabled:opacity-50"
-                        >
-                          I Approved on PayPal &rarr; Finalize Escrow Hold
-                        </button>
-                      )}
-                    </div>
                   </div>
 
-                  {createdOrderId && (
-                    <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-600 dark:text-zinc-400">
-                      PayPal Order <code className="font-mono">{createdOrderId}</code> opened in popup. After completing login & approval in PayPal, click the green button above to finalize.
-                    </div>
-                  )}
+                  <div className="space-y-2 pt-1">
+                    <Button
+                      variant="primary"
+                      loading={actionLoading}
+                      onClick={handleBuyerCreateOrder}
+                      className="w-full"
+                    >
+                      Authorize on PayPal ({contract.item.price.amount} {contract.item.price.currency})
+                    </Button>
+
+                    {createdOrderId && (
+                      <div className="space-y-2 pt-2">
+                        <div className="p-3 rounded-md bg-neutral-50 border border-border text-xs text-neutral-700">
+                          PayPal order <code className="font-mono">{createdOrderId}</code> opened in popup. After completing approval in PayPal, click below to finalize.
+                        </div>
+                        <Button
+                          variant="secondary"
+                          loading={actionLoading}
+                          onClick={handleBuyerAuthorize}
+                          className="w-full"
+                        >
+                          I approved on PayPal, finalize escrow hold
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
               {(deal.status === "FUNDS_HELD" || deal.status === "SHIPPED") && (
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-3">
                   <div>
-                    <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      {deal.status === "FUNDS_HELD" ? "Waiting for Seller to Ship" : "Package In Transit"}
+                    <h3 className="text-sm font-semibold text-neutral-900">
+                      {deal.status === "FUNDS_HELD" ? "Waiting for seller to ship" : "Package in transit"}
                     </h3>
-                    <p className="text-xs text-zinc-500">
-                      Already received the package in good condition?
+                    <p className="text-xs text-neutral-600 mt-1">
+                      Already received the package in good condition? You can confirm early receipt to release funds now.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    disabled={actionLoading}
+                  <Button
+                    variant="secondary"
+                    loading={actionLoading}
                     onClick={handleConfirmReceipt}
-                    className="px-4 py-2 rounded-lg bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-medium transition"
+                    className="w-full"
                   >
-                    Confirm Early Receipt & Release Funds
-                  </button>
+                    Confirm early receipt and release funds
+                  </Button>
                 </div>
               )}
 
               {deal.status === "DELIVERED" && (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 space-y-3">
-                    <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                      Package Delivered: Inspection Window Active
-                    </h3>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                      Carrier tracking confirmed delivery. Please inspect your item. If satisfied, release the funds. If no dispute is raised, funds will auto-release automatically.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        disabled={actionLoading}
-                        onClick={handleConfirmReceipt}
-                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition"
-                      >
-                        Confirm Receipt & Release Funds
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowClaimForm(!showClaimForm)}
-                        className="px-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
-                      >
-                        {showClaimForm ? "Hide Dispute Form" : "Report an Issue / Dispute"}
-                      </button>
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-md bg-success-50 border border-success-100 space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-success-700">
+                      <CheckCircle size={15} weight="bold" />
+                      <span>Package delivered: Inspection window active</span>
                     </div>
+                    <p className="text-xs text-neutral-700 leading-relaxed">
+                      Carrier tracking confirmed delivery. Please inspect your item. If satisfied, confirm receipt to release funds. If no dispute is raised, funds release automatically after the review period.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Button
+                      variant="primary"
+                      loading={actionLoading}
+                      onClick={handleConfirmReceipt}
+                      className="w-full"
+                    >
+                      Confirm receipt and release funds
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowClaimForm(!showClaimForm)}
+                      className="w-full"
+                    >
+                      {showClaimForm ? "Hide dispute form" : "Report an issue / dispute"}
+                    </Button>
                   </div>
 
                   {showClaimForm && (
-                    <form onSubmit={handleOpenClaim} className="p-4 rounded-xl bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 space-y-3">
-                      <label className="text-xs font-medium text-zinc-800 dark:text-zinc-200 block">
-                        Describe the issue with your delivery:
-                      </label>
-                      <textarea
-                        rows={2}
+                    <form onSubmit={handleOpenClaim} className="space-y-3 pt-2">
+                      <Textarea
+                        label="Describe the issue with your delivery:"
                         required
                         value={claimReason}
                         onChange={(e) => setClaimReason(e.target.value)}
-                        placeholder="e.g. Package arrived damaged, empty, or differs substantially from description..."
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-rose-200 dark:border-rose-800 bg-white dark:bg-zinc-900"
+                        placeholder="For example: Package arrived damaged, empty, or differs substantially from the description."
                       />
-                      <button
+                      <Button
                         type="submit"
-                        disabled={actionLoading}
-                        className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition"
+                        variant="primary"
+                        loading={actionLoading}
+                        className="w-full bg-danger-600 hover:bg-danger-700"
                       >
-                        Submit Dispute to Referee
-                      </button>
+                        Submit dispute to Referee
+                      </Button>
                     </form>
                   )}
                 </div>
               )}
 
               {(deal.status === "RELEASED" || deal.status === "REFUNDED" || deal.status === "SETTLED") && (
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-500">
-                  Transaction is complete. No further action needed.
+                <div className="p-3 rounded-md bg-neutral-100 text-xs text-neutral-700">
+                  Transaction complete. No further action needed.
                 </div>
               )}
             </div>
           )}
 
-          {/* --- SELLER VIEWS --- */}
+          {/* --- SELLER ACTIONS --- */}
           {role === "seller" && (
             <div className="space-y-4">
               {deal.status === "AWAITING_PAYMENT" && (
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-600 dark:text-zinc-400 space-y-1">
-                  <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    Awaiting Buyer Payment
-                  </p>
-                  <p>
-                    The buyer has been sent their payment link. Once they approve the PayPal escrow hold, you will be notified to ship. Do not ship until funds are safely held.
+                <div className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-1 text-xs text-neutral-700">
+                  <p className="font-semibold text-neutral-900">Awaiting buyer payment</p>
+                  <p className="text-neutral-600 leading-relaxed">
+                    The buyer has received their payment link. Once they approve the PayPal escrow hold, you will be notified to ship. Do not ship until funds are safely held.
                   </p>
                 </div>
               )}
 
               {deal.status === "FUNDS_HELD" && (
-                <form onSubmit={handleSellerShip} className="p-5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 space-y-4">
+                <form onSubmit={handleSellerShip} className="space-y-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                      Funds Secured in Escrow: Ready to Ship!
+                    <h3 className="text-sm font-semibold text-neutral-900">
+                      Funds secured in escrow: Ready to ship
                     </h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                    <p className="text-xs text-neutral-600 mt-0.5">
                       Enter your shipping tracking number below so Referee can automatically verify delivery.
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Carrier</label>
-                      <select
-                        value={carrier}
-                        onChange={(e) => setCarrier(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs"
-                      >
-                        <option value="Mock Carrier">Mock Carrier (Demo / Local)</option>
-                        <option value="USPS">USPS</option>
-                        <option value="FedEx">FedEx</option>
-                        <option value="DHL">DHL</option>
-                      </select>
-                    </div>
+                  <div className="space-y-3">
+                    <Select
+                      label="Carrier"
+                      value={carrier}
+                      onValueChange={setCarrier}
+                      options={CARRIER_OPTIONS}
+                    />
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Tracking Number</label>
-                      <input
-                        type="text"
-                        required
-                        value={trackingNumber}
-                        onChange={(e) => setTrackingNumber(e.target.value)}
-                        placeholder="e.g. MCK-123456"
-                        className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-mono"
-                      />
-                    </div>
+                    <Input
+                      label="Tracking number"
+                      type="text"
+                      required
+                      value={trackingNumber}
+                      onChange={(e) => setTrackingNumber(e.target.value)}
+                      placeholder="e.g. MCK-123456"
+                    />
                   </div>
 
-                  <button
+                  <Button
                     type="submit"
-                    disabled={actionLoading}
-                    className="px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-semibold text-xs transition disabled:opacity-50"
+                    variant="primary"
+                    loading={actionLoading}
+                    className="w-full mt-2"
                   >
-                    {actionLoading ? "Submitting..." : "Submit Tracking Details &rarr;"}
-                  </button>
+                    Submit tracking details
+                  </Button>
                 </form>
               )}
 
               {deal.status === "SHIPPED" && (
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-600 dark:text-zinc-400 space-y-1">
-                  <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    Shipment Submitted
-                  </p>
-                  <p>
+                <div className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-1 text-xs text-neutral-700">
+                  <p className="font-semibold text-neutral-900">Shipment submitted</p>
+                  <p className="text-neutral-600 leading-relaxed">
                     Referee cloud browser is periodically tracking package progress. Once marked delivered, the inspection countdown will begin.
                   </p>
                 </div>
               )}
 
+              {deal.status === "DELIVERED" && (
+                <div className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-1 text-xs text-neutral-700">
+                  <p className="font-semibold text-neutral-900">Package delivered</p>
+                  <p className="text-neutral-600 leading-relaxed">
+                    The buyer has an active inspection window. If no dispute is raised, funds will automatically release to your account.
+                  </p>
+                </div>
+              )}
+
               {(deal.status === "RELEASED" || deal.status === "REFUNDED" || deal.status === "SETTLED") && (
-                <div className="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-500">
-                  Transaction is complete. No further action needed.
+                <div className="p-3 rounded-md bg-neutral-100 text-xs text-neutral-700">
+                  Transaction complete. No further action needed.
                 </div>
               )}
             </div>
           )}
-        </div>
+        </Card>
+
+        {/* Activity Timeline Card */}
+        <Card className="space-y-4">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-600 border-b border-border pb-3">
+            Activity timeline
+          </h2>
+
+          <div className="relative pl-5 space-y-4 border-l border-neutral-200">
+            {events.map((evt) => (
+              <div key={evt.id} className="relative">
+                <span className="absolute -left-[25px] top-1 h-2.5 w-2.5 rounded-full bg-neutral-400 border-2 border-surface" />
+                <div className="space-y-0.5">
+                  <p className="text-xs font-medium text-neutral-900">
+                    {formatEventSummary(evt.type, evt.payload as any)}
+                  </p>
+                  <p className="text-[11px] text-neutral-500 tabular-nums">
+                    {new Date(evt.createdAt).toLocaleDateString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
 
         {/* Collapsible Demo Control Panel */}
         <DemoControlPanel
           trackingNumber={
-            (events.find((e) => e.type === "SHIPMENT_ADDED")?.payload as any)?.trackingNumber || trackingNumber
+            (events.find((e) => e.type === "SHIPMENT_ADDED")?.payload as any)?.trackingNumber ||
+            trackingNumber
           }
           onActionComplete={reloadDeal}
         />
+      </div>
 
-        {/* 2-Column: Timeline & Contract Details */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Timeline & Evidence (2 cols) */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Timeline */}
-            <div className="p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                Activity Timeline
-              </h2>
+      {/* RIGHT PANE: Tabs for Evidence, Decisions, Terms */}
+      <div className="w-full md:w-7/12 flex flex-col md:overflow-hidden md:min-h-0">
+        <Card className="flex flex-col md:h-full md:overflow-hidden md:min-h-0 p-4 sm:p-6">
+          {/* Tab Bar */}
+          <div className="flex items-center gap-2 border-b border-border pb-3 shrink-0" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "evidence"}
+              onClick={() => setActiveTab("evidence")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "evidence"
+                  ? "bg-primary-700 text-white"
+                  : "text-neutral-700 hover:bg-neutral-100"
+              }`}
+            >
+              <Package size={14} weight={activeTab === "evidence" ? "bold" : "regular"} />
+              <span>Evidence</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${
+                  activeTab === "evidence"
+                    ? "bg-primary-800 text-white"
+                    : "bg-neutral-200 text-neutral-800"
+                }`}
+              >
+                {evidence.length}
+              </span>
+            </button>
 
-              <div className="relative pl-5 space-y-4 border-l border-zinc-200 dark:border-zinc-800">
-                {events.map((evt) => (
-                  <div key={evt.id} className="relative">
-                    <span className="absolute -left-[25px] top-1 h-2.5 w-2.5 rounded-full bg-zinc-400 dark:bg-zinc-600 border-2 border-white dark:border-zinc-900" />
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                        {formatEventSummary(evt.type, evt.payload as any)}
-                      </p>
-                      <p className="text-[11px] text-zinc-400">
-                        {new Date(evt.createdAt).toLocaleDateString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "decisions"}
+              onClick={() => setActiveTab("decisions")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "decisions"
+                  ? "bg-primary-700 text-white"
+                  : "text-neutral-700 hover:bg-neutral-100"
+              }`}
+            >
+              <Scales size={14} weight={activeTab === "decisions" ? "bold" : "regular"} />
+              <span>Decisions</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${
+                  activeTab === "decisions"
+                    ? "bg-primary-800 text-white"
+                    : "bg-neutral-200 text-neutral-800"
+                }`}
+              >
+                {dealData.decisions?.length || 0}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "terms"}
+              onClick={() => setActiveTab("terms")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "terms"
+                  ? "bg-primary-700 text-white"
+                  : "text-neutral-700 hover:bg-neutral-100"
+              }`}
+            >
+              <Receipt size={14} weight={activeTab === "terms" ? "bold" : "regular"} />
+              <span>Contract terms</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${
+                  activeTab === "terms"
+                    ? "bg-primary-800 text-white"
+                    : "bg-neutral-200 text-neutral-800"
+                }`}
+              >
+                {contract.clauses.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Tab Content Container */}
+          <div className="md:flex-1 md:min-h-0 md:overflow-y-auto pt-4">
+            {/* 1. Evidence Tab */}
+            {activeTab === "evidence" && (
+              <div className="space-y-4">
+                {evidence.length === 0 ? (
+                  <div className="rounded-md border border-dashed border-border p-8 text-center text-xs text-neutral-600">
+                    Nothing yet. Evidence appears here after the item ships.
                   </div>
-                ))}
+                ) : (
+                  <div className="space-y-3">
+                    {evidence.map((ev) => (
+                      <div
+                        key={ev.id}
+                        className="p-3.5 rounded-md border border-border bg-neutral-50 text-xs space-y-2 shadow-xs"
+                      >
+                        <div className="flex justify-between items-center text-neutral-600">
+                          <span className="font-semibold text-neutral-900 capitalize">
+                            {ev.kind.replace(/_/g, " ")}
+                          </span>
+                          <span className="text-[11px] font-mono tabular-nums">
+                            {new Date(ev.createdAt).toLocaleTimeString()}
+                          </span>
+                        </div>
+                        {ev.contentText && (
+                          <p className="text-neutral-800 leading-relaxed font-normal">
+                            {ev.contentText}
+                          </p>
+                        )}
+                        {ev.artifactUrl && (
+                          <div className="pt-1 space-y-2">
+                            {(ev.artifactUrl.endsWith(".png") ||
+                              ev.artifactUrl.endsWith(".jpg") ||
+                              ev.artifactUrl.includes("/screenshots/") ||
+                              ev.artifactUrl.startsWith("data:image/")) && (
+                              <div className="rounded-md overflow-hidden border border-border max-w-sm">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={ev.artifactUrl}
+                                  alt={`Evidence ${ev.id}`}
+                                  className="w-full h-auto object-cover max-h-48 hover:max-h-none transition-all cursor-zoom-in"
+                                />
+                              </div>
+                            )}
+                            <a
+                              href={ev.artifactUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-primary-700 hover:underline"
+                            >
+                              <span>View cloud browser artifact</span>
+                              <ArrowSquareOut size={13} weight="bold" />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            )}
 
-            {/* Evidence items */}
-            {evidence.length > 0 && (
-              <div className="p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                  Verified Evidence ({evidence.length})
-                </h2>
-                <div className="grid grid-cols-1 gap-3">
-                  {evidence.map((ev) => (
+            {/* 2. Decisions Tab */}
+            {activeTab === "decisions" && (
+              <DecisionLog
+                token={token}
+                decisions={dealData.decisions || []}
+                clauses={contract.clauses || []}
+                evidence={evidence || []}
+                onRefresh={reloadDeal}
+              />
+            )}
+
+            {/* 3. Terms Tab */}
+            {activeTab === "terms" && (
+              <div className="space-y-3">
+                <div className="pb-2">
+                  <h3 className="text-base font-semibold text-neutral-900 font-serif">
+                    Contract clauses
+                  </h3>
+                  <p className="text-xs text-neutral-600 mt-0.5">
+                    Pre-agreed escrow agreement rules governing releases, deadlines, and disputes.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {contract.clauses.map((c) => (
                     <div
-                      key={ev.id}
-                      className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-xs space-y-2"
+                      key={c.id}
+                      className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-1"
                     >
-                      <div className="flex justify-between items-center text-zinc-500">
-                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                          {ev.kind.replace(/_/g, " ")}
-                        </span>
-                        <span className="text-[11px] font-mono">
-                          {new Date(ev.createdAt).toLocaleTimeString()}
+                      <div className="flex items-center gap-1.5">
+                        <FileText size={14} weight="bold" className="text-primary-700" />
+                        <span className="font-semibold text-neutral-900 text-xs">
+                          Clause {c.id}
                         </span>
                       </div>
-                      {ev.contentText && (
-                        <p className="text-zinc-700 dark:text-zinc-300">
-                          {ev.contentText}
-                        </p>
-                      )}
-                      {ev.artifactUrl && (
-                        <div className="pt-1 space-y-2">
-                          {(ev.artifactUrl.endsWith(".png") ||
-                            ev.artifactUrl.endsWith(".jpg") ||
-                            ev.artifactUrl.includes("/screenshots/") ||
-                            ev.artifactUrl.startsWith("data:image/")) && (
-                            <div className="rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 max-w-sm">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={ev.artifactUrl}
-                                alt={`Evidence ${ev.id}`}
-                                className="w-full h-auto object-cover max-h-48 hover:max-h-none transition-all cursor-zoom-in"
-                              />
-                            </div>
-                          )}
-                          <a
-                            href={ev.artifactUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-900 dark:text-zinc-100 hover:underline"
-                          >
-                            View Cloud Browser Artifact &rarr;
-                          </a>
-                        </div>
-                      )}
+                      <p className="text-xs text-neutral-700 leading-relaxed pl-5">
+                        {c.text}
+                      </p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
           </div>
-
-          {/* Contract Terms (1 col) */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-4 h-fit">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-              Contract Clauses
-            </h2>
-            <div className="space-y-3 text-xs">
-              {contract.clauses.map((c) => (
-                <div
-                  key={c.id}
-                  className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/60 dark:border-zinc-800/60 space-y-1"
-                >
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 text-[11px]">
-                    Clause {c.id}
-                  </span>
-                  <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">{c.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Decision Log (Screen 3) */}
-        <DecisionLog
-          token={token}
-          decisions={dealData.decisions || []}
-          clauses={contract.clauses || []}
-          evidence={evidence || []}
-          onRefresh={reloadDeal}
-        />
+        </Card>
       </div>
     </div>
   );
