@@ -16,7 +16,6 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react/dist/ssr";
 import { DecisionLog } from "@/components/DecisionLog";
-import { DemoControlPanel } from "@/components/DemoControlPanel";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -363,6 +362,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to add shipment");
+      setActiveTab("evidence");
       await reloadDeal();
     } catch (err: any) {
       alert(`Shipping error: ${err.message}`);
@@ -440,11 +440,14 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
   const { deal, role, events, evidence, payment } = dealData;
   const contract = deal.contract;
   const statusInfo = mapDealStatus(deal.status);
+  const latestTrackingEvidence = evidence
+    .filter((e) => e.kind === "tracking_snapshot" || Boolean(e.artifactUrl))
+    .slice(-1)[0];
 
   return (
     <div className="w-full max-w-[1200px] mx-auto p-4 sm:p-6 md:p-8 flex-1 min-h-0 md:h-full md:overflow-hidden flex flex-col justify-start">
       <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0 md:h-full md:overflow-hidden">
-        {/* LEFT PANE: Header, role actions, demo tools, timeline */}
+        {/* LEFT PANE: Header, role actions, timeline */}
         <div className="w-full md:w-5/12 flex flex-col gap-4 md:gap-6 md:h-full md:overflow-y-auto min-h-0 md:pr-2">
           {/* Deal Header Card */}
         <Card className="space-y-4 shrink-0">
@@ -565,9 +568,58 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                       {deal.status === "FUNDS_HELD" ? "Waiting for seller to ship" : "Package in transit"}
                     </h3>
                     <p className="text-xs text-neutral-600 mt-1">
-                      Already received the package in good condition? You can confirm early receipt to release funds now.
+                      {deal.status === "FUNDS_HELD"
+                        ? "Already received the package in good condition? You can confirm early receipt to release funds now."
+                        : "Referee verified tracking details via cloud browser. Once you receive your item, confirm receipt below."}
                     </p>
                   </div>
+
+                  {deal.status === "SHIPPED" && latestTrackingEvidence && (
+                    <div className="p-3.5 rounded-md border border-primary-200 bg-primary-50/40 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-primary-900 flex items-center gap-1.5">
+                          <ShieldCheck size={16} weight="bold" className="text-primary-700" />
+                          <span>Kernel cloud browser verification</span>
+                        </span>
+                        <span className="text-[11px] text-neutral-500 font-mono tabular-nums">
+                          {new Date(latestTrackingEvidence.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+
+                      {latestTrackingEvidence.contentText && (
+                        <p className="text-xs text-neutral-700 leading-relaxed bg-surface p-2.5 rounded-sm border border-border font-mono text-[11px]">
+                          {latestTrackingEvidence.contentText}
+                        </p>
+                      )}
+
+                      {latestTrackingEvidence.artifactUrl && (
+                        <div className="space-y-2 pt-1">
+                          <div className="rounded-md overflow-hidden border border-border bg-surface max-h-48">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={latestTrackingEvidence.artifactUrl}
+                              alt="Carrier verification preview"
+                              className="w-full h-auto object-cover max-h-48 cursor-pointer hover:opacity-95 transition"
+                              onClick={() => window.open(latestTrackingEvidence.artifactUrl!, "_blank")}
+                            />
+                          </div>
+                          <a
+                            href={latestTrackingEvidence.artifactUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-700 hover:underline"
+                          >
+                            <span>View full cloud browser artifact</span>
+                            <ArrowSquareOut size={13} weight="bold" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <Button
                     variant="secondary"
                     loading={actionLoading}
@@ -693,20 +745,116 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
               )}
 
               {deal.status === "SHIPPED" && (
-                <div className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-1 text-xs text-neutral-700">
-                  <p className="font-semibold text-neutral-900">Shipment submitted</p>
-                  <p className="text-neutral-600 leading-relaxed">
-                    Referee cloud browser is periodically tracking package progress. Once marked delivered, the inspection countdown will begin.
-                  </p>
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-1 text-xs text-neutral-700">
+                    <p className="font-semibold text-neutral-900">Shipment submitted</p>
+                    <p className="text-neutral-600 leading-relaxed">
+                      Referee cloud browser verified the tracking details. Once marked delivered, the inspection countdown will begin.
+                    </p>
+                  </div>
+
+                  {latestTrackingEvidence && (
+                    <div className="p-3.5 rounded-md border border-primary-200 bg-primary-50/40 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-primary-900 flex items-center gap-1.5">
+                          <ShieldCheck size={16} weight="bold" className="text-primary-700" />
+                          <span>Kernel cloud browser verification</span>
+                        </span>
+                        <span className="text-[11px] text-neutral-500 font-mono tabular-nums">
+                          {new Date(latestTrackingEvidence.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+
+                      {latestTrackingEvidence.contentText && (
+                        <p className="text-xs text-neutral-700 leading-relaxed bg-surface p-2.5 rounded-sm border border-border font-mono text-[11px]">
+                          {latestTrackingEvidence.contentText}
+                        </p>
+                      )}
+
+                      {latestTrackingEvidence.artifactUrl && (
+                        <div className="space-y-2 pt-1">
+                          <div className="rounded-md overflow-hidden border border-border bg-surface max-h-52">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={latestTrackingEvidence.artifactUrl}
+                              alt="Carrier verification preview"
+                              className="w-full h-auto object-cover max-h-52 hover:opacity-95 transition cursor-pointer"
+                              onClick={() => window.open(latestTrackingEvidence.artifactUrl!, "_blank")}
+                            />
+                          </div>
+                          <a
+                            href={latestTrackingEvidence.artifactUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-700 hover:underline"
+                          >
+                            <span>View full cloud browser artifact</span>
+                            <ArrowSquareOut size={13} weight="bold" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
               {deal.status === "DELIVERED" && (
-                <div className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-1 text-xs text-neutral-700">
-                  <p className="font-semibold text-neutral-900">Package delivered</p>
-                  <p className="text-neutral-600 leading-relaxed">
-                    The buyer has an active inspection window. If no dispute is raised, funds will automatically release to your account.
-                  </p>
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-1 text-xs text-neutral-700">
+                    <p className="font-semibold text-neutral-900">Package delivered</p>
+                    <p className="text-neutral-600 leading-relaxed">
+                      The buyer has an active inspection window. If no dispute is raised, funds will automatically release to your account.
+                    </p>
+                  </div>
+
+                  {latestTrackingEvidence && (
+                    <div className="p-3.5 rounded-md border border-primary-200 bg-primary-50/40 space-y-3">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-primary-900 flex items-center gap-1.5">
+                          <ShieldCheck size={16} weight="bold" className="text-primary-700" />
+                          <span>Kernel cloud browser verification</span>
+                        </span>
+                        <span className="text-[11px] text-neutral-500 font-mono tabular-nums">
+                          {new Date(latestTrackingEvidence.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+
+                      {latestTrackingEvidence.contentText && (
+                        <p className="text-xs text-neutral-700 leading-relaxed bg-surface p-2.5 rounded-sm border border-border font-mono text-[11px]">
+                          {latestTrackingEvidence.contentText}
+                        </p>
+                      )}
+
+                      {latestTrackingEvidence.artifactUrl && (
+                        <div className="space-y-2 pt-1">
+                          <div className="rounded-md overflow-hidden border border-border bg-surface max-h-52">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={latestTrackingEvidence.artifactUrl}
+                              alt="Carrier verification preview"
+                              className="w-full h-auto object-cover max-h-52 hover:opacity-95 transition cursor-pointer"
+                              onClick={() => window.open(latestTrackingEvidence.artifactUrl!, "_blank")}
+                            />
+                          </div>
+                          <a
+                            href={latestTrackingEvidence.artifactUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-700 hover:underline"
+                          >
+                            <span>View full cloud browser artifact</span>
+                            <ArrowSquareOut size={13} weight="bold" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -718,15 +866,6 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
             </div>
           )}
         </Card>
-
-        {/* Collapsible Demo Control Panel */}
-        <DemoControlPanel
-          trackingNumber={
-            (events.find((e) => e.type === "SHIPMENT_ADDED")?.payload as any)?.trackingNumber ||
-            trackingNumber
-          }
-          onActionComplete={reloadDeal}
-        />
 
         {/* Activity Timeline Card */}
         <Card className="space-y-4 shrink-0">

@@ -28,9 +28,8 @@ Traditional escrow services (e.g. Escrow.com) are too heavy, manual, and expensi
 ```mermaid
 flowchart TD
     subgraph Users ["Parties & Roles"]
-        Seller["Seller (Sari)"]
-        Buyer["Buyer (Maya)"]
-        Operator["Operator (Demo Controls)"]
+        Seller["Seller"]
+        Buyer["Buyer"]
     end
 
     subgraph Frontend ["Next.js App Router (Screen 1 & 2)"]
@@ -49,7 +48,7 @@ flowchart TD
     subgraph Integrations ["External APIs & Integrations"]
         PayPal["PayPal Sandbox<br/>(Orders v2, Payments v2, Payouts v1)"]
         Kernel["Kernel Cloud Browser<br/>(Remote Playwright & Screenshots)"]
-        Sweeper["Deadline Sweeper<br/>(Time-Scaled Cron Job)"]
+        Sweeper["Deadline Sweeper<br/>(Automated Cron Job)"]
     end
 
     subgraph Database ["Data Store"]
@@ -62,16 +61,15 @@ flowchart TD
     Screen1 -->|POST /api/deals| Postgres
 
     Buyer -->|Authorize payment| Screen2
-    Screen2 -->|PayPal Buttons| PayPal
+    Screen2 -->|PayPal Popup Modal| PayPal
     PayPal -->|authorization_id| Screen2
 
     Seller -->|Add shipment tracking| Screen2
-    Screen2 -->|check_tracking| Kernel
+    Screen2 -->|verifyTrackingWithKernel| Kernel
+    Kernel -->|screenshot & status| Screen2
     Kernel -->|tracking_snapshot| Postgres
 
     Sweeper -->|POST /api/internal/sweep| Referee
-    Operator -->|Flip status / Trigger sweep| Screen2
-    Screen2 --> Referee
 
     Referee -->|Proposed Decision| PolicyEngine
     PolicyEngine -->|Verdict: ALLOWED| Executor
@@ -151,31 +149,28 @@ Visit [http://localhost:3000](http://localhost:3000) to open the application.
 | `GEMINI_API_KEY` | Yes | Google Gemini API key | `AIzaSy...` |
 | `INTERNAL_SWEEP_SECRET`| Yes | Shared secret for deadline sweeper endpoint | `referee-internal-sweep-secret-demo` |
 | `HUMAN_APPROVAL_THRESHOLD` | No | Amount over which decisions escalate to human | `300` |
-| `DEMO_MODE` | No | Enables mock carrier control and demo UI panels | `true` |
-| `DEMO_TIME_SCALE` | No | Time acceleration factor (1440 = 1 day per 60s) | `1440` |
 
 ---
 
-## 6. How to Run the Demo
+## 6. How to Run the Deal Flow
 
-### Flow 1: Happy Path (Create -> Pay -> Ship -> Verify -> Release)
+### Flow 1: Happy Path (Create, Pay, Ship, Verify, Release)
 1. **Create Deal:** Open [http://localhost:3000](http://localhost:3000). In the Drafter box, type:
    > *"Selling vintage leather messenger bag to Maya for $120. Shipping in 2 days with 7 day return window."*
    Click **Draft with AI**. The contract preview populates automatically with clauses `C1` to `C5`.
 2. **Generate Links:** Click **Create Deal Contract**. You will receive a **Seller Link** and a **Buyer Link**.
-3. **Buyer Funds:** Open the Buyer Link in a new tab. Click **Fund Deal with PayPal Sandbox**. Log in with your Sandbox Personal Buyer account and click **Agree and Pay**. Status advances to **FUNDS_HELD**.
-4. **Seller Ships:** Switch to the Seller tab. In the Action panel, submit tracking number `TRK-DELIV-101`.
-5. **Kernel Verification:** Referee initiates cloud browser verification. An immutable screenshot and delivery proof appear in the **Verified Evidence** panel. Deal advances to **DELIVERED**.
-6. **Auto-Release:** In the **Demo Controls** panel, click **Run Deadline Sweeper Now** (or wait for the inspection window). The Referee evaluates terms, the Policy Engine returns `ALLOWED`, and funds are released via PayPal capture and payout.
-7. **Decision Log:** Open the **Decision Log (Screen 3)** at the bottom to inspect the autonomous card citing clauses `C3`/`C4` and evidence `E1`.
+3. **Buyer Funds:** Open the Buyer Link in a new tab. Click **Authorize on PayPal**. A centered checkout popup modal opens (or auto-redirects on mobile). Log in with your Sandbox Personal Buyer account and approve the escrow hold. The webhook and modal listener immediately capture the hold and status advances to **FUNDS_HELD**.
+4. **Seller Ships:** Switch to the Seller tab. In the Current step panel, submit a tracking number (e.g. `MCK-123456`).
+5. **Kernel Verification:** Referee initiates cloud browser verification via Kernel. The live verification preview with screenshot artifact, carrier status, and timestamp appears immediately right in the Deal Room card.
+6. **Escrow Release:** Once delivered, the buyer confirms receipt in the Deal Room (or the automated deadline sweeper releases funds upon inspection window conclusion). Referee evaluates terms, the Policy Engine returns `ALLOWED`, and funds are released via PayPal capture and payout.
+7. **Decision Log:** Open the **Decision Log** tab to inspect the transparent arbiter card citing clauses `C3`/`C4` and verified evidence.
 
-### Flow 2: Failure Path (No Shipment → Automatic Refund)
+### Flow 2: Failure Path (No Shipment to Automatic Refund)
 1. Create a deal for $60 and approve payment via PayPal sandbox. Funds become **FUNDS_HELD**.
-2. Seller does not ship.
-3. In the Demo Controls panel, click **Run Deadline Sweeper Now**.
-4. The sweeper detects that the 3-day ship deadline expired without tracking (`SHIP_DEADLINE_EXPIRED`).
-5. Referee proposes `REFUND` citing clause `C2`. The Policy Engine validates rule **PE-3** (`ALLOWED`).
-6. `executeDecision()` voids the PayPal authorization hold. Status transitions to **REFUNDED**.
+2. Seller does not ship within the agreed shipping deadline.
+3. The automated deadline sweeper (`/api/internal/sweep`) detects that the 3-day ship deadline expired without tracking (`SHIP_DEADLINE_EXPIRED`).
+4. Referee proposes `REFUND` citing clause `C2`. The Policy Engine validates rule **PE-3** (`ALLOWED`).
+5. `executeDecision()` voids the PayPal authorization hold. Status transitions to **REFUNDED**.
 
 ### Flow 3: Adversarial Prompt Injection Defense
 1. Seller opens a claim or appends a note:
