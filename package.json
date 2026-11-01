@@ -1,0 +1,47 @@
+{
+  "name": "referee",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "eval": "tsx evals/run.ts",
+    "db:push": "drizzle-kit push",
+    "smoke:paypal": "tsx scripts/smoke-paypal.ts",
+    "smoke:kernel": "tsx scripts/smoke-kernel.ts"
+  },
+  "dependencies": {
+    "@onkernel/sdk": "0.139.0",
+    "@paypal/paypal-server-sdk": "2.5.0",
+    "dotenv": "16.4.7",
+    "drizzle-orm": "0.45.4",
+    "next": "16.4.3",
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "3.24.2"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.13.9",
+    "@types/pg": "8.11.11",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "autoprefixer": "10.6.2",
+    "drizzle-kit": "0.31.11",
+    "eslint": "9.22.0",
+    "eslint-config-next": "16.4.3",
+    "postcss": "8.5.3",
+    "prettier": "3.5.2",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "5.8.2",
+    "vitest": "3.0.7"
+  }
+}

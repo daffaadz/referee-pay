@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: referee-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: referee
+      POSTGRES_PASSWORD: referee
+      POSTGRES_DB: referee
+    ports:
+      - "5432:5432"
+    volumes:
+      - referee_pgdata:/var/lib/postgresql/data
+
+volumes:
+  referee_pgdata:
+
