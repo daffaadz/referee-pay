@@ -52,6 +52,30 @@ export function CreateDealForm() {
   const [returnWindowDays, setReturnWindowDays] = useState(7);
   const [returnShippingPaidBy, setReturnShippingPaidBy] = useState<"buyer" | "seller">("buyer");
 
+  // Authenticated seller state
+  const [sessionSeller, setSessionSeller] = useState<{ id: string; email: string; name?: string | null } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    fetch("/api/seller/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (mounted && data.authenticated && data.seller) {
+          setSessionSeller(data.seller);
+          setSellerEmail(data.seller.email);
+          if (data.seller.name) setSellerName(data.seller.name);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setAuthLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Validation errors
   const [errors, setErrors] = useState<{
     title?: string;
@@ -143,8 +167,8 @@ export function CreateDealForm() {
         if (c.item?.description) setDescription(c.item.description);
         if (c.item?.price?.amount) setAmount(c.item.price.amount);
         if (c.item?.price?.currency) setCurrency(c.item.price.currency);
-        if (c.seller?.displayName) setSellerName(c.seller.displayName);
-        if (c.seller?.paypalEmail) setSellerEmail(c.seller.paypalEmail);
+        if (c.seller?.displayName && !sessionSeller) setSellerName(c.seller.displayName);
+        if (c.seller?.paypalEmail && !sessionSeller) setSellerEmail(c.seller.paypalEmail);
         if (c.buyer?.displayName) setBuyerName(c.buyer.displayName);
         if (c.terms?.shipDeadlineDays) setShipDeadlineDays(c.terms.shipDeadlineDays);
         if (c.terms?.deliveryDeadlineDays) setDeliveryDeadlineDays(c.terms.deliveryDeadlineDays);
@@ -429,6 +453,23 @@ export function CreateDealForm() {
                 subtitle="Check the details extracted from your description before creating the escrow deal."
               />
 
+              {!sessionSeller && !authLoading && (
+                <div className="mb-4 p-3 bg-neutral-100 border border-neutral-300 rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 text-neutral-800">
+                    <Lock size={16} weight="bold" className="text-primary-700 shrink-0" />
+                    <span>Sellers sign in so payouts go to a verified PayPal account. Buyers never need an account.</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href="/api/auth/paypal/login"
+                      className="px-3 py-1.5 rounded-sm bg-primary-700 hover:bg-primary-800 text-white font-medium transition"
+                    >
+                      Continue with PayPal
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {createError && (
                 <div className="mb-3 flex items-center gap-2 p-3 bg-danger-50 border border-danger-100 rounded-sm text-xs font-medium text-danger-700">
                   <WarningCircle size={16} weight="bold" className="shrink-0" />
@@ -507,10 +548,21 @@ export function CreateDealForm() {
                       label="Your PayPal email"
                       type="email"
                       value={sellerEmail}
-                      onChange={(e) => setSellerEmail(e.target.value)}
+                      onChange={sessionSeller ? undefined : (e) => setSellerEmail(e.target.value)}
+                      readOnly={Boolean(sessionSeller)}
                       error={errors.sellerEmail}
-                      helperText="You are paid here after delivery is confirmed."
-                      iconPrefix={<EnvelopeSimple size={16} />}
+                      helperText={
+                        sessionSeller
+                          ? "Locked to your verified PayPal account for payouts."
+                          : "You are paid here after delivery is confirmed."
+                      }
+                      iconPrefix={
+                        sessionSeller ? (
+                          <Lock size={16} className="text-primary-700" />
+                        ) : (
+                          <EnvelopeSimple size={16} />
+                        )
+                      }
                     />
                   </div>
 

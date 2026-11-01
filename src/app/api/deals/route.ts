@@ -4,10 +4,21 @@ import { generateCapabilityTokens } from "@/domain/tokens";
 import { createDeal } from "@/db/queries";
 import { appendDealEvent } from "@/db/events";
 import { env } from "@/config/env";
+import { verifySessionToken, SESSION_COOKIE_NAME } from "@/domain/session";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
+    const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const session = sessionToken ? await verifySessionToken(sessionToken) : null;
+
+    if (!session) {
+      return NextResponse.json(
+        { error: "Authentication required: Please sign in with PayPal before creating a deal." },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     // Auto-generate default clauses if not provided
@@ -24,14 +35,22 @@ export async function POST(request: NextRequest) {
     }
 
     const contract = parsed.data;
+
+    // Money safety rule: Force payout destination to verified seller email from session
+    contract.seller.paypalEmail = session.email;
+    if (session.name && !contract.seller.displayName) {
+      contract.seller.displayName = session.name;
+    }
+
     const dealId = `deal_${crypto.randomUUID().slice(0, 12)}`;
 
     // Generate cryptographic capability tokens (FR-2: >= 128 bits)
     const tokens = generateCapabilityTokens();
 
-    // Persist deal in DB (storing only hashes)
+    // Persist deal in DB linked to verified seller_id
     const deal = await createDeal({
       id: dealId,
+      sellerId: session.sellerId,
       contract,
       sellerTokenHash: tokens.sellerTokenHash,
       buyerTokenHash: tokens.buyerTokenHash,
@@ -50,6 +69,8 @@ export async function POST(request: NextRequest) {
     await appendDealEvent(dealId, "CONTRACT_CREATED", {
       itemTitle: contract.item.title,
       price: contract.item.price,
+      sellerId: session.sellerId,
+      sellerEmail: session.email,
     });
 
     const baseUrl = env.APP_URL;
@@ -63,10 +84,11 @@ export async function POST(request: NextRequest) {
       buyerUrl: `${baseUrl}/deal/${tokens.buyerToken}`,
       contract,
     });
-  } catch (error: any) {
-    console.error("Error creating deal:", error.message || error);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : "Failed to create deal";
+    console.error("Error creating deal:", errorMsg);
     return NextResponse.json(
-      { error: error.message || "Failed to create deal" },
+      { error: errorMsg },
       { status: 500 }
     );
   }

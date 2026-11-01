@@ -5,6 +5,7 @@ import * as events from "@/db/events";
 import * as kernelClient from "@/integrations/kernel/client";
 import * as refereeAgent from "@/agent/referee";
 import * as executorAgent from "@/agent/executor";
+import { createSessionToken, SESSION_COOKIE_NAME } from "@/domain/session";
 import { POST as createDealRoute } from "./route";
 import { GET as getDealRoute } from "./[token]/route";
 import { POST as shipRoute } from "./[token]/ship/route";
@@ -36,10 +37,17 @@ describe("Deal Lifecycle API Routes (FR-1, FR-4, FR-8)", () => {
       },
     };
 
+    const sessionToken = await createSessionToken({
+      sellerId: "seller_test_123",
+      email: "sari-seller@example.com",
+      name: "Sari",
+    });
+
     const req = new NextRequest("http://localhost:3000/api/deals", {
       method: "POST",
       body: JSON.stringify(validPayload),
     });
+    req.cookies.set(SESSION_COOKIE_NAME, sessionToken);
 
     const res = await createDealRoute(req);
     expect(res.status).toBe(200);

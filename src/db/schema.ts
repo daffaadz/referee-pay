@@ -1,7 +1,17 @@
-import { pgTable, text, timestamp, jsonb, numeric } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp, jsonb, numeric } from "drizzle-orm/pg-core";
+
+export const sellers = pgTable("sellers", {
+  id: text("id").primaryKey(),
+  paypalSub: text("paypal_sub").unique().notNull(),
+  email: text("email").notNull(),
+  emailVerified: boolean("email_verified").default(true).notNull(),
+  name: text("name"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
 
 export const deals = pgTable("deals", {
   id: text("id").primaryKey(),
+  sellerId: text("seller_id").references(() => sellers.id, { onDelete: "set null" }),
   status: text("status").notNull(),
   contractJson: jsonb("contract_json").notNull(),
   sellerTokenHash: text("seller_token_hash").notNull(),

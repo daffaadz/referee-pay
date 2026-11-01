@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Flask, Plus } from "@phosphor-icons/react/dist/ssr";
 import { youngSerif, hankenGrotesk } from "./fonts";
+import { SellerAuthNav } from "@/components/auth/SellerAuthNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -51,8 +52,9 @@ export default function RootLayout({
             </Link>
 
             <div className="flex items-center gap-3">
+              <SellerAuthNav />
               <div
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700 border border-border"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700 border border-border"
                 role="status"
                 aria-label="Payments use the PayPal sandbox. No real money moves."
               >

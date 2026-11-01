@@ -36,11 +36,29 @@ async function verifyLive() {
   console.log(`   Generated Clauses: ${draftData.contract?.clauses?.length || 0}`);
   console.log("   [PASS] AI Drafter passed.\n");
 
+  // 2.5 Authenticate as Seller (via Demo Sign-In)
+  console.log("2.5 Testing POST /api/auth/demo (Seller Authentication)...");
+  const authRes = await fetch(`${BASE_URL}/api/auth/demo`, {
+    method: "POST",
+  });
+  console.log(`   Status: ${authRes.status} ${authRes.statusText}`);
+  let sessionCookie = "";
+  const setCookieHeader = authRes.headers.get("set-cookie");
+  if (setCookieHeader) {
+    const match = setCookieHeader.match(/referee_session=([^;]+)/);
+    if (match) sessionCookie = match[0];
+  }
+  console.log(`   Session Cookie Received: ${Boolean(sessionCookie)}`);
+  console.log("   [PASS] Seller authentication succeeded.\n");
+
   // 3. Create Deal in Neon Postgres
   console.log("3. Testing POST /api/deals (Save Contract to Neon DB)...");
   const createRes = await fetch(`${BASE_URL}/api/deals`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(sessionCookie ? { Cookie: sessionCookie } : {}),
+    },
     body: JSON.stringify(draftData.contract),
   });
   console.log(`   Status: ${createRes.status} ${createRes.statusText}`);

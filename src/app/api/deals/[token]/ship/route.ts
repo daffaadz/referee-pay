@@ -4,6 +4,7 @@ import { getDealByToken, updateDealStatus, getEvidenceForDeal, addEvidence } fro
 import { appendDealEvent } from "@/db/events";
 import { transition, DealStatus } from "@/domain/state-machine";
 import { verifyTrackingWithKernel } from "@/integrations/kernel/client";
+import { verifySessionToken, SESSION_COOKIE_NAME } from "@/domain/session";
 
 export const maxDuration = 60;
 
@@ -28,6 +29,18 @@ export async function POST(
     // FR-4: Allowed only in FUNDS_HELD and only by seller
     if (role !== "seller") {
       return NextResponse.json({ error: "Only the seller can submit shipment tracking" }, { status: 403 });
+    }
+
+    // Ownership check: if deal was created by an authenticated seller, enforce session match
+    if (deal.sellerId) {
+      const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+      const session = sessionToken ? await verifySessionToken(sessionToken) : null;
+      if (!session || session.sellerId !== deal.sellerId) {
+        return NextResponse.json(
+          { error: "Forbidden: You are not authorized to update shipment on this deal" },
+          { status: 403 }
+        );
+      }
     }
 
     if (deal.status !== "FUNDS_HELD") {

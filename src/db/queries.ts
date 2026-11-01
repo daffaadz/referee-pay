@@ -1,5 +1,5 @@
 import { db } from "./index";
-import { deals, dealEvents, evidence, decisions, payments, messages } from "./schema";
+import { sellers, deals, dealEvents, evidence, decisions, payments, messages } from "./schema";
 import { eq, or, and, desc, notInArray } from "drizzle-orm";
 import { hashToken, resolveRoleByToken, Role } from "../domain/tokens";
 import type { DealStatus, DealEvent, DealEventType } from "../domain/state-machine";
@@ -8,8 +8,11 @@ import type { Evidence } from "../domain/evidence";
 import type { DecisionRecord } from "../domain/decision";
 import crypto from "crypto";
 
+export type Seller = typeof sellers.$inferSelect;
+
 export interface CreateDealInput {
   id: string;
+  sellerId?: string | null;
   contract: DealContract;
   sellerTokenHash: string;
   buyerTokenHash: string;
@@ -19,6 +22,7 @@ export interface CreateDealInput {
 export async function createDeal(input: CreateDealInput) {
   const row = {
     id: input.id,
+    sellerId: input.sellerId || null,
     status: "DRAFT" as DealStatus,
     contractJson: input.contract,
     sellerTokenHash: input.sellerTokenHash,
@@ -31,6 +35,59 @@ export async function createDeal(input: CreateDealInput) {
 
   await db.insert(deals).values(row);
   return row;
+}
+
+export async function upsertSeller(input: {
+  paypalSub: string;
+  email: string;
+  emailVerified?: boolean;
+  name?: string | null;
+}) {
+  const existing = await db
+    .select()
+    .from(sellers)
+    .where(eq(sellers.paypalSub, input.paypalSub))
+    .limit(1);
+
+  if (existing.length > 0) {
+    const updated = {
+      email: input.email,
+      emailVerified: input.emailVerified ?? existing[0].emailVerified,
+      name: input.name !== undefined ? input.name : existing[0].name,
+    };
+    await db.update(sellers).set(updated).where(eq(sellers.id, existing[0].id));
+    return { ...existing[0], ...updated };
+  }
+
+  const id = `seller_${crypto.randomUUID()}`;
+  const row = {
+    id,
+    paypalSub: input.paypalSub,
+    email: input.email,
+    emailVerified: input.emailVerified ?? true,
+    name: input.name || null,
+    createdAt: new Date(),
+  };
+  await db.insert(sellers).values(row);
+  return row;
+}
+
+export async function getSellerById(id: string) {
+  const result = await db.select().from(sellers).where(eq(sellers.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function getSellerByPaypalSub(paypalSub: string) {
+  const result = await db.select().from(sellers).where(eq(sellers.paypalSub, paypalSub)).limit(1);
+  return result[0] || null;
+}
+
+export async function getDealsBySellerId(sellerId: string) {
+  return await db
+    .select()
+    .from(deals)
+    .where(eq(deals.sellerId, sellerId))
+    .orderBy(desc(deals.createdAt));
 }
 
 export async function getDealById(dealId: string) {
