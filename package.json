@@ -13,11 +13,14 @@
     "eval": "tsx evals/run.ts",
     "db:push": "drizzle-kit push",
     "smoke:paypal": "tsx scripts/smoke-paypal.ts",
-    "smoke:kernel": "tsx scripts/smoke-kernel.ts"
+    "smoke:kernel": "tsx scripts/smoke-kernel.ts",
+    "smoke:e2e": "tsx scripts/smoke-e2e.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.1.20",
     "@onkernel/sdk": "0.139.0",
     "@paypal/paypal-server-sdk": "2.5.0",
+    "ai": "^4.1.54",
     "dotenv": "16.4.7",
     "drizzle-orm": "0.45.4",
     "next": "16.4.3",

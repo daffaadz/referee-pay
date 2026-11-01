@@ -15,7 +15,7 @@ const envSchema = z.object({
   PAYPAL_PLATFORM_EMAIL: z.string().email().optional().or(z.literal("")),
   KERNEL_API_KEY: z.string().optional().or(z.literal("")),
   LLM_PROVIDER: z.string().default("google"),
-  LLM_MODEL: z.string().default("gemini-2.5-flash"),
+  LLM_MODEL: z.string().default("gemini-3.5-flash-lite"),
   LLM_API_KEY: z.string().optional().or(z.literal("")),
   GEMINI_API_KEY: z.string().optional().or(z.literal("")),
   INTERNAL_SWEEP_SECRET: z.string().default("referee-internal-sweep-secret-demo"),
