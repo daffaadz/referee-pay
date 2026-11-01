@@ -40,3 +40,6 @@ Thumbs.db
 *.sln
 *.sw?
 
+# Documentation & specs (local only)
+/docs/
+
