@@ -71,15 +71,17 @@ describe("PayPal Route Handlers (FR-3)", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.orderId).toBe("ORDER-12345");
-    expect(createOrderSpy).toHaveBeenCalledWith({
-      dealId: "deal-2",
-      amount: { amount: "85.00", currency: "USD" },
-      customId: "deal-2",
-    });
+    expect(createOrderSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dealId: "deal-2",
+        amount: { amount: "85.00", currency: "USD" },
+        customId: "deal-2",
+      })
+    );
     expect(recordPaymentSpy).toHaveBeenCalled();
   });
 
-  it("authorize returns 400 on invalid body missing orderId", async () => {
+  it("authorize returns 400 when orderId is missing and not in payment record", async () => {
     vi.spyOn(queries, "getDealByToken").mockResolvedValue({
       deal: {
         id: "deal-3",
@@ -87,6 +89,7 @@ describe("PayPal Route Handlers (FR-3)", () => {
       } as any,
       role: "buyer",
     });
+    vi.spyOn(queries, "getPaymentByDealId").mockResolvedValue(null as any);
 
     const req = new NextRequest("http://localhost:3000/api/deals/token123/paypal/authorize", {
       method: "POST",
@@ -96,17 +99,22 @@ describe("PayPal Route Handlers (FR-3)", () => {
     const res = await authorizeRoute(req, { params: Promise.resolve({ token: "token123" }) });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toBe("Invalid request body");
+    expect(body.error).toContain("No PayPal order found");
   });
 
   it("authorize transitions deal to FUNDS_HELD and records authorization", async () => {
+    const mockDeal = {
+      id: "deal-4",
+      status: "AWAITING_PAYMENT",
+      amount: "100.00",
+      currency: "USD",
+    } as any;
+
     vi.spyOn(queries, "getDealByToken").mockResolvedValue({
-      deal: {
-        id: "deal-4",
-        status: "AWAITING_PAYMENT",
-      } as any,
+      deal: mockDeal,
       role: "buyer",
     });
+    vi.spyOn(queries, "getDealById").mockResolvedValue(mockDeal);
 
     vi.spyOn(fundsHold, "authorizeOrder").mockResolvedValue({
       authorizationId: "AUTH-99999",

@@ -13,6 +13,7 @@ const envSchema = z.object({
   PAYPAL_CLIENT_ID: z.string().min(1, "PAYPAL_CLIENT_ID is required"),
   PAYPAL_CLIENT_SECRET: z.string().min(1, "PAYPAL_CLIENT_SECRET is required"),
   PAYPAL_PLATFORM_EMAIL: z.string().email().optional().or(z.literal("")),
+  PAYPAL_WEBHOOK_ID: z.string().optional().or(z.literal("")),
   KERNEL_API_KEY: z.string().optional().or(z.literal("")),
   LLM_PROVIDER: z.string().default("google"),
   LLM_MODEL: z.string().default("gemini-3.5-flash-lite"),

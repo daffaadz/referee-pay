@@ -30,11 +30,18 @@ export async function POST(
     const contract = deal.contractJson as DealContract;
     const contractPrice = contract.item.price;
 
+    // Build return and cancel URLs for popup / redirect return flow
+    const origin = _request.nextUrl.origin || "http://localhost:3000";
+    const returnUrl = `${origin}/deal/${token}?paypal_approved=true`;
+    const cancelUrl = `${origin}/deal/${token}?paypal_cancelled=true`;
+
     // Call FundsHold to create the order with intent=AUTHORIZE
     const orderResult = await fundsHold.createOrder({
       dealId: deal.id,
       amount: contractPrice,
       customId: deal.id,
+      returnUrl,
+      cancelUrl,
     });
 
     // Persist payment record with order ID

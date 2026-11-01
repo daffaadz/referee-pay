@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useCallback, use } from "react";
 import {
   ArrowSquareOut,
   CheckCircle,
+  CircleNotch,
   FileText,
   Lock,
   Package,
@@ -177,6 +178,9 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
   const [claimReason, setClaimReason] = useState("");
   const [showClaimForm, setShowClaimForm] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [approveUrl, setApproveUrl] = useState<string | null>(null);
+  const [paymentPopupOpen, setPaymentPopupOpen] = useState(false);
+  const [autoAuthorizing, setAutoAuthorizing] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -207,7 +211,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
     };
   }, [token]);
 
-  const reloadDeal = async () => {
+  const reloadDeal = useCallback(async () => {
     try {
       const res = await fetch(`/api/deals/${token}`);
       const data = await res.json();
@@ -217,7 +221,115 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
     } catch (err) {
       console.error(err);
     }
+  }, [token]);
+
+  // Helper to open PayPal in a centered modal popup window (desktop) or redirect (mobile)
+  const openPayPalPopup = (url: string) => {
+    const width = 540;
+    const height = 700;
+    const left = typeof window !== "undefined" ? Math.max(0, (window.innerWidth - width) / 2 + window.screenX) : 100;
+    const top = typeof window !== "undefined" ? Math.max(0, (window.innerHeight - height) / 2 + window.screenY) : 100;
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+
+    if (isMobile) {
+      // Mobile browsers: direct redirect so return flow brings buyer back seamlessly
+      window.location.href = url;
+      return;
+    }
+
+    const popup = window.open(
+      url,
+      "RefereePayPalCheckout",
+      `width=${width},height=${height},top=${top},left=${left},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`
+    );
+
+    setPaymentPopupOpen(true);
+
+    const timer = setInterval(() => {
+      if (popup && popup.closed) {
+        clearInterval(timer);
+        setPaymentPopupOpen(false);
+      }
+    }, 1000);
   };
+
+  // Listen for message from popup window once PayPal approval completes
+  useEffect(() => {
+    const handleMessage = async (e: MessageEvent) => {
+      if (typeof window !== "undefined" && e.origin !== window.location.origin) return;
+      if (e.data?.type === "PAYPAL_APPROVED") {
+        setPaymentPopupOpen(false);
+        setAutoAuthorizing(true);
+        try {
+          const res = await fetch(`/api/deals/${token}/paypal/authorize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: e.data.orderId || createdOrderId }),
+          });
+          if (res.ok) {
+            await reloadDeal();
+          }
+        } catch (err) {
+          console.error("Popup authorization error:", err);
+        } finally {
+          setAutoAuthorizing(false);
+        }
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [token, createdOrderId, reloadDeal]);
+
+  // Handle return redirect flow (e.g. on mobile or if loaded in popup window)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("paypal_approved") === "true") {
+      const orderIdFromUrl = params.get("order_id") || params.get("token") || undefined;
+
+      // If inside a popup window, inform the parent and close itself
+      if (window.opener) {
+        try {
+          window.opener.postMessage(
+            { type: "PAYPAL_APPROVED", orderId: orderIdFromUrl },
+            window.location.origin
+          );
+          window.close();
+          return;
+        } catch {
+          // Fall through if opener access is restricted
+        }
+      }
+
+      // If in same window (mobile redirect return), trigger auto-authorization
+      const handleAutoAuthorize = async () => {
+        setAutoAuthorizing(true);
+        try {
+          const res = await fetch(`/api/deals/${token}/paypal/authorize`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: orderIdFromUrl }),
+          });
+          if (res.ok) {
+            await reloadDeal();
+          }
+        } catch (err) {
+          console.error("Auto authorization failed:", err);
+        } finally {
+          setAutoAuthorizing(false);
+          // Clean query params from the URL cleanly
+          const url = new URL(window.location.href);
+          url.searchParams.delete("paypal_approved");
+          url.searchParams.delete("order_id");
+          url.searchParams.delete("token");
+          window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+        }
+      };
+
+      void handleAutoAuthorize();
+    }
+  }, [token, reloadDeal]);
 
   // Buyer: Initiate PayPal payment
   const handleBuyerCreateOrder = async () => {
@@ -228,32 +340,12 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
       if (!res.ok) throw new Error(data.error || "Failed to initiate payment");
 
       setCreatedOrderId(data.orderId);
+      setApproveUrl(data.approveUrl);
       if (data.approveUrl) {
-        window.open(data.approveUrl, "_blank");
+        openPayPalPopup(data.approveUrl);
       }
     } catch (err: any) {
       alert(`Payment error: ${err.message}`);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Buyer: Authorize PayPal payment
-  const handleBuyerAuthorize = async () => {
-    if (!createdOrderId) return;
-    setActionLoading(true);
-    try {
-      const res = await fetch(`/api/deals/${token}/paypal/authorize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: createdOrderId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to authorize payment");
-      setCreatedOrderId(null);
-      await reloadDeal();
-    } catch (err: any) {
-      alert(`Authorization error: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -426,29 +518,41 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                   </div>
 
                   <div className="space-y-2 pt-1">
-                    <Button
-                      variant="primary"
-                      loading={actionLoading}
-                      onClick={handleBuyerCreateOrder}
-                      className="w-full"
-                    >
-                      Authorize on PayPal ({contract.item.price.amount} {contract.item.price.currency})
-                    </Button>
-
-                    {createdOrderId && (
-                      <div className="space-y-2 pt-2">
-                        <div className="p-3 rounded-md bg-neutral-50 border border-border text-xs text-neutral-700">
-                          PayPal order <code className="font-mono">{createdOrderId}</code> opened in popup. After completing approval in PayPal, click below to finalize.
+                    {paymentPopupOpen || autoAuthorizing ? (
+                      <div className="p-3.5 rounded-md bg-neutral-50 border border-border space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-neutral-900">
+                          <CircleNotch size={16} weight="bold" className="animate-spin text-primary-700" />
+                          <span>
+                            {autoAuthorizing ? "Finalizing escrow hold..." : "PayPal popup active"}
+                          </span>
                         </div>
-                        <Button
-                          variant="secondary"
-                          loading={actionLoading}
-                          onClick={handleBuyerAuthorize}
-                          className="w-full"
-                        >
-                          I approved on PayPal, finalize escrow hold
-                        </Button>
+                        <p className="text-xs text-neutral-600 leading-relaxed">
+                          {autoAuthorizing
+                            ? "Payment approved on PayPal. Referee is locking funds into escrow..."
+                            : "Log in to PayPal Sandbox and approve the hold. Escrow will be secured automatically."}
+                        </p>
+                        {approveUrl && !autoAuthorizing && (
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => openPayPalPopup(approveUrl)}
+                              className="inline-flex items-center gap-1.5 text-xs text-primary-700 hover:underline font-medium cursor-pointer"
+                            >
+                              <ArrowSquareOut size={13} weight="bold" />
+                              <span>Popup blocked? Click to re-open PayPal</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      <Button
+                        variant="primary"
+                        loading={actionLoading}
+                        onClick={handleBuyerCreateOrder}
+                        className="w-full"
+                      >
+                        Authorize on PayPal ({contract.item.price.amount} {contract.item.price.currency})
+                      </Button>
                     )}
                   </div>
                 </div>

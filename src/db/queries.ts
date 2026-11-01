@@ -155,6 +155,15 @@ export async function getPaymentByDealId(dealId: string) {
   return authorized || rows[0] || null;
 }
 
+export async function getPaymentByOrderId(orderId: string) {
+  const rows = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.orderId, orderId))
+    .limit(1);
+  return rows[0] || null;
+}
+
 export const getPaymentForDeal = getPaymentByDealId;
 
 export async function recordDecision(record: DecisionRecord) {

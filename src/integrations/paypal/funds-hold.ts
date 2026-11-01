@@ -1,5 +1,9 @@
 import crypto from "crypto";
-import { CheckoutPaymentIntent } from "@paypal/paypal-server-sdk";
+import {
+  CheckoutPaymentIntent,
+  OrderApplicationContextUserAction,
+  OrderApplicationContextShippingPreference,
+} from "@paypal/paypal-server-sdk";
 import { ordersController, paymentsController, getPayPalAccessToken } from "./client";
 import type { Money } from "../../domain/money";
 
@@ -91,21 +95,33 @@ export class PaypalStrategyAFundsHold implements FundsHold {
   async createOrder(params: CreateOrderParams): Promise<CreateOrderResult> {
     const requestId = makeIdempotencyKey(params.dealId, "create-order");
 
+    const orderBody: Record<string, unknown> = {
+      intent: CheckoutPaymentIntent.Authorize,
+      purchaseUnits: [
+        {
+          amount: {
+            currencyCode: params.amount.currency,
+            value: params.amount.amount,
+          },
+          customId: params.customId,
+          description: `Referee Escrow Deal: ${params.dealId}`,
+        },
+      ],
+    };
+
+    if (params.returnUrl || params.cancelUrl) {
+      orderBody.applicationContext = {
+        returnUrl: params.returnUrl,
+        cancelUrl: params.cancelUrl,
+        brandName: "Referee Escrow",
+        userAction: OrderApplicationContextUserAction.Continue,
+        shippingPreference: OrderApplicationContextShippingPreference.NoShipping,
+      };
+    }
+
     const response = await ordersController.createOrder({
       paypalRequestId: requestId,
-      body: {
-        intent: CheckoutPaymentIntent.Authorize,
-        purchaseUnits: [
-          {
-            amount: {
-              currencyCode: params.amount.currency,
-              value: params.amount.amount,
-            },
-            customId: params.customId,
-            description: `Referee Escrow Deal: ${params.dealId}`,
-          },
-        ],
-      },
+      body: orderBody as any,
     });
 
     const order = response.result;
