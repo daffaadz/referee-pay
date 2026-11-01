@@ -43,3 +43,4 @@ Thumbs.db
 # Documentation & specs (local only)
 /docs/
 
+.neon

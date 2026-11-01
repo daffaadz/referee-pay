@@ -15,10 +15,13 @@
     "db:push": "drizzle-kit push",
     "smoke:paypal": "tsx scripts/smoke-paypal.ts",
     "smoke:kernel": "tsx scripts/smoke-kernel.ts",
-    "smoke:e2e": "tsx scripts/smoke-e2e.ts"
+    "smoke:e2e": "tsx scripts/smoke-e2e.ts",
+    "smoke:neon": "tsx scripts/test-neon.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.1.20",
+    "@neon/config": "^1.10.0",
+    "@neon/env": "^1.6.8",
     "@onkernel/sdk": "0.139.0",
     "@paypal/paypal-server-sdk": "2.5.0",
     "@phosphor-icons/react": "^2.1.10",
