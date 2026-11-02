@@ -4,6 +4,14 @@ import { generateOAuthState, STATE_COOKIE_NAME } from "@/domain/session";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  // If request arrived via localhost, redirect to 127.0.0.1 so that the state cookie
+  // and the PayPal return URL share the exact same host origin.
+  if (request.nextUrl.hostname === "localhost") {
+    const targetUrl = new URL(request.url);
+    targetUrl.hostname = "127.0.0.1";
+    return NextResponse.redirect(targetUrl);
+  }
+
   const clientId = process.env.PAYPAL_CLIENT_ID;
   if (!clientId) {
     return NextResponse.json(
