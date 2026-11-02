@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, SignOut, ShieldCheck } from "@phosphor-icons/react/dist/ssr";
+import { User, SignOut } from "@phosphor-icons/react/dist/ssr";
+import { PayPalLoginButton } from "./PayPalLoginButton";
 
 interface SellerProfile {
   id: string;
@@ -84,13 +85,7 @@ export function SellerAuthNav() {
 
   return (
     <div className="flex items-center gap-2">
-      <a
-        href="/api/auth/paypal/login"
-        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm bg-primary-700 hover:bg-primary-800 text-white text-xs font-medium transition focus-visible:outline-2 focus-visible:outline-focus-ring"
-      >
-        <ShieldCheck size={16} weight="bold" />
-        <span>Continue with PayPal</span>
-      </a>
+      <PayPalLoginButton size="sm" />
     </div>
   );
 }

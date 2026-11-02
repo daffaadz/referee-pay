@@ -16,6 +16,7 @@ import {
   CardHeader,
   Toast,
 } from "@/components/ui";
+import { PayPalLoginButton } from "@/components/auth/PayPalLoginButton";
 import {
   Bicycle,
   Handbag,
@@ -460,12 +461,7 @@ export function CreateDealForm() {
                     <span>Sellers sign in so payouts go to a verified PayPal account. Buyers never need an account.</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href="/api/auth/paypal/login"
-                      className="px-3 py-1.5 rounded-sm bg-primary-700 hover:bg-primary-800 text-white font-medium transition"
-                    >
-                      Continue with PayPal
-                    </a>
+                    <PayPalLoginButton size="sm" />
                   </div>
                 </div>
               )}

@@ -194,11 +194,17 @@ select:-webkit-autofill:focus {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Links */
-a {
-  color: var(--primary-700);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+@layer base {
+  /* Default prose links */
+  a {
+    color: var(--primary-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  a:hover {
+    color: var(--primary-800);
+  }
 }
 
 /* Accessible Focus Ring */

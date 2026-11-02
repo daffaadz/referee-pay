@@ -30,6 +30,8 @@
     "@radix-ui/react-radio-group": "^1.5.1",
     "@radix-ui/react-select": "^2.4.1",
     "@radix-ui/react-tooltip": "^1.4.1",
+    "ag-studio": "^3.0.0",
+    "ag-studio-react": "^3.0.0",
     "ai": "^4.1.54",
     "dotenv": "16.4.7",
     "drizzle-orm": "0.45.4",
