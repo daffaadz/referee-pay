@@ -1,0 +1,176 @@
+/* Bryntum Scheduler Custom Theme Override with DESIGN.md tokens */
+@import "@bryntum/scheduler/scheduler.css";
+@import "@bryntum/scheduler/stockholm-light.css";
+@import "@bryntum/gantt/gantt.css";
+@import "@bryntum/gantt/stockholm-light.css";
+
+:root {
+  --b-primary: #0F5C4D;
+  --b-primary-dark: #0A483D;
+  --b-primary-light: #EBFBF4;
+  --b-accent: #F2A81D;
+  --b-color-blue: #0F5C4D;
+  --b-color-orange: #F2A81D;
+  --b-color-green: #047E39;
+  --b-color-red: #AF3C3A;
+  --b-grid-background: #F6FBFA;
+  --b-grid-header-background: #EFF6F3;
+  --b-grid-header-text-color: #151B19;
+  --b-border-color: #E2EAE7;
+  --b-font-family: var(--font-hanken-grotesk), system-ui, -apple-system, sans-serif;
+  --b-event-font-size: 13px;
+  --b-event-border-radius: 6px;
+}
+
+/* Base Bryntum container styling */
+.b-scheduler {
+  font-family: var(--font-hanken-grotesk), system-ui, -apple-system, sans-serif;
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #E2EAE7);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.b-grid-header-container {
+  background-color: #EFF6F3 !important;
+  border-bottom: 1px solid #E2EAE7 !important;
+}
+
+.b-grid-header {
+  font-family: var(--font-hanken-grotesk), system-ui, sans-serif;
+  font-weight: 600;
+  color: #151B19;
+  font-size: 13px;
+}
+
+.b-grid-row {
+  border-bottom: 1px solid #E2EAE7 !important;
+}
+
+.b-grid-row:hover {
+  background-color: #F6FBFA !important;
+}
+
+/* Event Bar Theming by State */
+.b-sch-event.state-upcoming {
+  background-color: #EFF6F3 !important;
+  color: #57605D !important;
+  border: 1px solid #D0D8D5 !important;
+}
+
+.b-sch-event.state-active {
+  background-color: #0F5C4D !important;
+  color: #FFFFFF !important;
+  border: 1px solid #0A483D !important;
+}
+
+.b-sch-event.state-overdue {
+  background-color: #AF3C3A !important;
+  color: #FFFFFF !important;
+  border: 1px solid #932B2A !important;
+}
+
+.b-sch-event.state-done {
+  background-color: #047E39 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #00672D !important;
+}
+
+.b-sch-event.state-refunded {
+  background-color: #2B6991 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #195579 !important;
+}
+
+/* Event Bar Animation on Live Highlight */
+.b-sch-event.state-highlight {
+  animation: pulseHighlight 2s ease-in-out infinite;
+  box-shadow: 0 0 0 4px #F2A81D !important;
+}
+
+@keyframes pulseHighlight {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* Milestone Decision Marker Styling */
+.b-sch-event.b-milestone.referee-decision-marker {
+  color: #8A5619 !important;
+  background-color: #FFD988 !important;
+  border: 1px solid #F2A81D !important;
+  border-radius: 9999px !important;
+}
+
+/* Today line */
+.b-timerange-today_line, .bryntum-today-line {
+  border-left: 2px dashed #0F5C4D !important;
+  background-color: rgba(15, 92, 77, 0.08) !important;
+}
+
+/* Custom Tooltip Styling */
+.b-tooltip {
+  background-color: #090F0D !important;
+  color: #FFFFFF !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(21, 27, 25, 0.16) !important;
+  border: 1px solid #3C4542 !important;
+  font-family: var(--font-hanken-grotesk), system-ui, sans-serif !important;
+}
+
+/* Bryntum Gantt Custom Styling */
+.b-gantt {
+  font-family: var(--font-hanken-grotesk), system-ui, -apple-system, sans-serif;
+  background-color: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #E2EAE7);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.b-gantt-task.gantt-task-completed .b-gantt-task-content {
+  background-color: #047E39 !important;
+  color: #FFFFFF !important;
+  border-radius: 4px;
+}
+
+.b-gantt-task.gantt-task-in_progress .b-gantt-task-content {
+  background-color: #0F5C4D !important;
+  color: #FFFFFF !important;
+  border-radius: 4px;
+}
+
+.b-gantt-task.gantt-task-late .b-gantt-task-content {
+  background-color: #AF3C3A !important;
+  color: #FFFFFF !important;
+  border-radius: 4px;
+  animation: pulseLate 2s ease-in-out infinite;
+}
+
+@keyframes pulseLate {
+  0% { box-shadow: 0 0 0 0 rgba(175, 60, 58, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(175, 60, 58, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(175, 60, 58, 0); }
+}
+
+.b-gantt-task.gantt-task-waiting .b-gantt-task-content {
+  background-color: #EFF6F3 !important;
+  color: #57605D !important;
+  border: 1px dashed #D0D8D5 !important;
+  border-radius: 4px;
+}
+
+.b-gantt-task.gantt-task-refunded .b-gantt-task-content {
+  background-color: #2B6991 !important;
+  color: #FFFFFF !important;
+  border-radius: 4px;
+}
+
+/* Baseline Bar Styling (Planned vs Actual) */
+.b-gantt-baseline {
+  background-color: rgba(242, 168, 29, 0.25) !important;
+  border: 1px dashed #F2A81D !important;
+  border-radius: 3px;
+  height: 6px !important;
+}
+
+

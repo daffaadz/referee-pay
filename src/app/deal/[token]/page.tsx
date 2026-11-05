@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useEffect, useState, useCallback, useMemo, use } from "react";
 import {
   ArrowSquareOut,
   CheckCircle,
   CircleNotch,
   FileText,
+  Kanban,
   Lock,
   Package,
   Receipt,
@@ -22,6 +23,8 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { StatusChip, DealStatusType } from "@/components/ui/StatusChip";
+import { buildDealGanttData } from "@/domain/gantt";
+import { DealGanttView } from "@/components/deal/DealGanttView";
 import type { DealStatus, DealEventType } from "@/domain/state-machine";
 import type { DealContract } from "@/domain/contract";
 import type { Role } from "@/domain/tokens";
@@ -169,7 +172,7 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"evidence" | "decisions" | "terms">("evidence");
+  const [activeTab, setActiveTab] = useState<"evidence" | "decisions" | "terms" | "gantt">("evidence");
 
   // Form states
   const [carrier, setCarrier] = useState("Mock Carrier");
@@ -180,6 +183,33 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
   const [approveUrl, setApproveUrl] = useState<string | null>(null);
   const [paymentPopupOpen, setPaymentPopupOpen] = useState(false);
   const [autoAuthorizing, setAutoAuthorizing] = useState(false);
+
+  const dealGanttData = useMemo(() => {
+    if (!dealData) return null;
+    const { deal, events } = dealData;
+    return buildDealGanttData({
+      dealId: deal.id,
+      status: deal.status,
+      contract: deal.contract,
+      createdAt: new Date(deal.createdAt),
+      deadlines: {
+        shipDeadline: deal.deadlines?.shipDeadlineDays
+          ? new Date(new Date(deal.createdAt).getTime() + deal.deadlines.shipDeadlineDays * 86400000).toISOString()
+          : null,
+        deliveryDeadline: deal.deadlines?.deliveryDeadlineDays
+          ? new Date(new Date(deal.createdAt).getTime() + (deal.deadlines.deliveryDeadlineDays + (deal.deadlines.shipDeadlineDays || 0)) * 86400000).toISOString()
+          : null,
+        reviewEnd: deal.deadlines?.inspectionWindowDays
+          ? new Date(new Date(deal.createdAt).getTime() + (deal.deadlines.inspectionWindowDays + (deal.deadlines.deliveryDeadlineDays || 0) + (deal.deadlines.shipDeadlineDays || 0)) * 86400000).toISOString()
+          : null,
+      },
+      events: (events || []).map((e) => ({
+        type: e.type,
+        createdAt: e.createdAt,
+        payload: e.payload,
+      })),
+    });
+  }, [dealData]);
 
   useEffect(() => {
     let isMounted = true;
@@ -972,6 +1002,30 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                 {contract.clauses.length}
               </span>
             </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "gantt"}
+              onClick={() => setActiveTab("gantt")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "gantt"
+                  ? "bg-primary-700 text-white"
+                  : "text-neutral-700 hover:bg-neutral-100"
+              }`}
+            >
+              <Kanban size={14} weight={activeTab === "gantt" ? "bold" : "regular"} />
+              <span>Gantt</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] tabular-nums ${
+                  activeTab === "gantt"
+                    ? "bg-primary-800 text-white"
+                    : "bg-neutral-200 text-neutral-800"
+                }`}
+              >
+                5
+              </span>
+            </button>
           </div>
 
           {/* Tab Content Container */}
@@ -1077,6 +1131,21 @@ export default function DealRoomPage({ params }: { params: Promise<{ token: stri
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* 4. Gantt Tab */}
+            {activeTab === "gantt" && dealGanttData && (
+              <div className="space-y-3">
+                <div className="pb-1">
+                  <h3 className="text-base font-semibold text-neutral-900 font-serif">
+                    Fulfillment Gantt Cascade
+                  </h3>
+                  <p className="text-xs text-neutral-600 mt-0.5">
+                    Interactive 5-task dependency view powered by Bryntum Gantt. Shows planned baseline terms versus live execution.
+                  </p>
+                </div>
+                <DealGanttView data={dealGanttData} />
               </div>
             )}
           </div>

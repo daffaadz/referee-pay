@@ -11,7 +11,7 @@ export async function middleware(request: NextRequest) {
 
     if (!session) {
       if (process.env.DEMO_MODE === "true") {
-        return NextResponse.redirect(new URL("/api/auth/demo?redirect=/dashboard", request.url));
+        return NextResponse.redirect(new URL(`/api/auth/demo?redirect=${encodeURIComponent(pathname)}`, request.url));
       }
       return NextResponse.redirect(new URL("/?login=required", request.url));
     }

@@ -20,6 +20,10 @@ export const pool =
     connectionTimeoutMillis: 5000,
   });
 
+pool.on("error", (err) => {
+  console.warn("Neon pool idle client connection reset:", err.message);
+});
+
 if (process.env.NODE_ENV !== "production") globalForDb.pool = pool;
 
 export const db = drizzle(pool, { schema });

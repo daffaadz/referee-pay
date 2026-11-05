@@ -4,12 +4,15 @@ import { generateOAuthState, STATE_COOKIE_NAME } from "@/domain/session";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  // Inspect the raw HTTP Host header sent by the client.
+  // Check client host from Host header or request.nextUrl
+  const clientHost = request.headers.get("host") || request.nextUrl.host || "";
+  const isExplicit127 = clientHost.includes("127.0.0.1") || request.nextUrl.hostname === "127.0.0.1";
+
   // In development, if the request arrived via localhost, redirect once to 127.0.0.1
   // so that the state cookie and the PayPal return URL share the exact same host origin.
-  const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
-  if (rawHost.startsWith("localhost")) {
-    const port = rawHost.split(":")[1] || "3000";
+  // Never redirect if already on 127.0.0.1 to avoid infinite redirect loops.
+  if (!isExplicit127 && (clientHost.startsWith("localhost") || request.nextUrl.hostname === "localhost")) {
+    const port = clientHost.split(":")[1] || request.nextUrl.port || "3000";
     return NextResponse.redirect(`http://127.0.0.1:${port}/api/auth/paypal/login`);
   }
 
@@ -21,16 +24,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const isLocal = rawHost.includes("127.0.0.1");
-  const protocol = request.headers.get("x-forwarded-proto") || (isLocal ? "http" : "https");
   let redirectUri: string;
-  if (isLocal) {
-    const port = rawHost.split(":")[1] || "3000";
+  if (isExplicit127) {
+    const port = clientHost.split(":")[1] || request.nextUrl.port || "3000";
     redirectUri = `http://127.0.0.1:${port}/api/auth/paypal/callback`;
   } else if (process.env.APP_URL && !process.env.APP_URL.includes("localhost") && !process.env.APP_URL.includes("127.0.0.1")) {
     redirectUri = `${process.env.APP_URL.replace(/\/$/, "")}/api/auth/paypal/callback`;
   } else {
-    redirectUri = `${protocol}://${rawHost}/api/auth/paypal/callback`;
+    const forwardedHost = request.headers.get("x-forwarded-host") || clientHost;
+    const protocol = request.headers.get("x-forwarded-proto") || (forwardedHost.includes("localhost") || forwardedHost.includes("127.0.0.1") ? "http" : "https");
+    redirectUri = `${protocol}://${forwardedHost}/api/auth/paypal/callback`;
   }
 
   const state = generateOAuthState();

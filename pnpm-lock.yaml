@@ -14,6 +14,18 @@ importers:
       '@ai-sdk/google':
         specifier: ^1.1.20
         version: 1.1.20(zod@3.24.2)
+      '@bryntum/gantt':
+        specifier: npm:@bryntum/gantt-trial@^7.3.8
+        version: '@bryntum/gantt-trial@7.3.8'
+      '@bryntum/gantt-react':
+        specifier: ^7.3.8
+        version: 7.3.8
+      '@bryntum/scheduler':
+        specifier: npm:@bryntum/scheduler-trial@^7.3.8
+        version: '@bryntum/scheduler-trial@7.3.8'
+      '@bryntum/scheduler-react':
+        specifier: ^7.3.8
+        version: 7.3.8
       '@neon/config':
         specifier: ^1.10.0
         version: 1.10.0
@@ -311,6 +323,28 @@ packages:
   '@bramus/specificity@2.4.3':
     resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
     hasBin: true
+
+  '@bryntum/gantt-react@7.3.8':
+    resolution: {integrity: sha512-CmlxtRIN2LleR6FlCBFXzxpzkNjx74WhD5z5U3/JJkMdJLd2OQWrjebyOMRbCYe6hD5fnCOta5RwuApM/ZQQQQ==}
+    engines: {node: '>=0.10.0'}
+
+  '@bryntum/gantt-trial-lib@1.0.1':
+    resolution: {integrity: sha512-VWtowNi9FBCC6EWz8zZjrnPALCsFrYt4HPwmsgqv3qediQPfyYM/5Bq3rFuEUa1/2C/1u7YXzW2q1HZykHnp+Q==}
+
+  '@bryntum/gantt-trial@7.3.8':
+    resolution: {integrity: sha512-u3qbPxYnd5Ut+hJTnofPdTBPznQVrR2YezYtpJGIbw6ed056frR0bMQUcqus5dkbi2MIFkgBm0HNfS/naZUirg==}
+    engines: {node: '>=0.10.0'}
+
+  '@bryntum/scheduler-react@7.3.8':
+    resolution: {integrity: sha512-PTzGFzsCrRoqLbbVqHlJ4sO8BSEEPzIkpVsCEwVy4Ci9hQlbVD62dTKcU35kTp81NhuDPw85l9Jj0xeQfCpZGg==}
+    engines: {node: '>=0.10.0'}
+
+  '@bryntum/scheduler-trial-lib@1.0.1':
+    resolution: {integrity: sha512-gTrNKz2O7JdNalEU9hma0fYyZ1mGhXXb6yCn/+E+SPjRyg/qFad1bQ7vfBUFitw3S3eB66IdtAZLD+QCtiIUKw==}
+
+  '@bryntum/scheduler-trial@7.3.8':
+    resolution: {integrity: sha512-VyZvV5koom8Td4DQF1aGMKpT7SKVieSMeVd0CuzEF4sctx2+bxoXXYeWxgLkWPzuKWJ9p8AxP4a06aYvxo0NvA==}
+    engines: {node: '>=0.10.0'}
 
   '@csstools/color-helpers@6.1.2':
     resolution: {integrity: sha512-grhRy3OKmniaAEKXMjua5z/EODX0MSqBGjunw8+j/3HQjOnahs2AGhvEOIYVUWcU6ScApbhLhVrQTX8XqrMrow==}
@@ -4431,6 +4465,22 @@ snapshots:
   '@bramus/specificity@2.4.3':
     dependencies:
       css-tree: 3.2.1
+
+  '@bryntum/gantt-react@7.3.8': {}
+
+  '@bryntum/gantt-trial-lib@1.0.1': {}
+
+  '@bryntum/gantt-trial@7.3.8':
+    dependencies:
+      '@bryntum/gantt-trial-lib': 1.0.1
+
+  '@bryntum/scheduler-react@7.3.8': {}
+
+  '@bryntum/scheduler-trial-lib@1.0.1': {}
+
+  '@bryntum/scheduler-trial@7.3.8':
+    dependencies:
+      '@bryntum/scheduler-trial-lib': 1.0.1
 
   '@csstools/color-helpers@6.1.2': {}
 

@@ -192,7 +192,24 @@ export function SellerDashboard() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        {/* Dashboard Navigation Tabs & Actions */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 mr-2">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="px-3 py-1.5 rounded-sm border border-primary-300 bg-primary-50 text-xs font-medium text-primary-800 transition"
+              aria-current="page"
+            >
+              Overview (AG Studio)
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/schedule")}
+              className="px-3 py-1.5 rounded-sm border border-neutral-200 hover:bg-neutral-50 text-xs font-medium text-neutral-700 transition"
+            >
+              Fulfillment Board (Bryntum)
+            </button>
+          </div>
+
           <button
             onClick={() => setIsAnalystOpen(!isAnalystOpen)}
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border text-xs font-medium transition ${

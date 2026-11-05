@@ -85,6 +85,24 @@ describe("Seller Authentication & Isolation (FR-13)", () => {
       expect(stateCookie?.value).toBeTruthy();
     });
 
+    it("does not loop when Next.js dev proxy injects x-forwarded-host localhost on 127.0.0.1", async () => {
+      process.env.PAYPAL_CLIENT_ID = "test_client_id_123";
+      process.env.PAYPAL_ENV = "sandbox";
+
+      const req = new NextRequest("http://127.0.0.1:3000/api/auth/paypal/login", {
+        headers: {
+          host: "127.0.0.1:3000",
+          "x-forwarded-host": "localhost:3000",
+        },
+      });
+      const res = await loginRoute(req);
+      expect(res.status).toBe(307);
+
+      const location = res.headers.get("location");
+      expect(location).toContain("https://www.sandbox.paypal.com/signin/authorize");
+      expect(location).not.toBe("http://127.0.0.1:3000/api/auth/paypal/login");
+    });
+
     it("returns 500 if PAYPAL_CLIENT_ID is missing", async () => {
       delete process.env.PAYPAL_CLIENT_ID;
 

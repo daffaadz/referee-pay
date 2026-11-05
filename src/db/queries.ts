@@ -115,11 +115,21 @@ export async function getDealByToken(token: string): Promise<{ deal: typeof deal
   const rows = await db
     .select()
     .from(deals)
-    .where(or(eq(deals.sellerTokenHash, tokenHash), eq(deals.buyerTokenHash, tokenHash)))
+    .where(
+      or(
+        eq(deals.sellerTokenHash, tokenHash),
+        eq(deals.buyerTokenHash, tokenHash),
+        eq(deals.id, token)
+      )
+    )
     .limit(1);
 
   const deal = rows[0];
   if (!deal) return null;
+
+  if (deal.id === token) {
+    return { deal, role: "seller" };
+  }
 
   const role = resolveRoleByToken(token, deal.sellerTokenHash, deal.buyerTokenHash);
   if (!role) return null;

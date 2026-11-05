@@ -1,7 +1,10 @@
 allowBuilds:
+  '@bryntum/gantt-trial': false
+  '@bryntum/gantt-trial-lib': false
+  '@bryntum/scheduler-trial': false
+  '@bryntum/scheduler-trial-lib': false
   esbuild: true
   unrs-resolver: true
 
 overrides:
   zod-to-json-schema: 3.24.3
-
