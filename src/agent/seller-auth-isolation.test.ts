@@ -7,6 +7,7 @@ import {
   STATE_COOKIE_NAME,
 } from "@/domain/session";
 import { GET as callbackRoute } from "@/app/api/auth/paypal/callback/route";
+import { GET as loginRoute } from "@/app/api/auth/paypal/login/route";
 import { GET as demoGetRoute, POST as demoPostRoute } from "@/app/api/auth/demo/route";
 import { GET as meRoute } from "@/app/api/seller/me/route";
 import { POST as createDealRoute } from "@/app/api/deals/route";
@@ -50,6 +51,50 @@ describe("Seller Authentication & Isolation (FR-13)", () => {
     it("rejects garbage string as token", async () => {
       const verified = await verifySessionToken("not-a-token-at-all");
       expect(verified).toBeNull();
+    });
+  });
+
+  describe("OAuth Login Route (FR-13)", () => {
+    it("redirects localhost to 127.0.0.1 to prevent cookie domain mismatch", async () => {
+      const req = new NextRequest("http://localhost:3000/api/auth/paypal/login", {
+        headers: { host: "localhost:3000" },
+      });
+      const res = await loginRoute(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe("http://127.0.0.1:3000/api/auth/paypal/login");
+    });
+
+    it("proceeds to PayPal authorize URL without redirect loop when requested on 127.0.0.1", async () => {
+      process.env.PAYPAL_CLIENT_ID = "test_client_id_123";
+      process.env.PAYPAL_ENV = "sandbox";
+
+      const req = new NextRequest("http://127.0.0.1:3000/api/auth/paypal/login", {
+        headers: { host: "127.0.0.1:3000" },
+      });
+      const res = await loginRoute(req);
+      expect(res.status).toBe(307);
+
+      const location = res.headers.get("location");
+      expect(location).toContain("https://www.sandbox.paypal.com/signin/authorize");
+      expect(location).toContain("client_id=test_client_id_123");
+      expect(location).toContain("redirect_uri=http%3A%2F%2F127.0.0.1%3A3000%2Fapi%2Fauth%2Fpaypal%2Fcallback");
+
+      // Verifies the state cookie is set on 127.0.0.1
+      const stateCookie = res.cookies.get(STATE_COOKIE_NAME);
+      expect(stateCookie).toBeDefined();
+      expect(stateCookie?.value).toBeTruthy();
+    });
+
+    it("returns 500 if PAYPAL_CLIENT_ID is missing", async () => {
+      delete process.env.PAYPAL_CLIENT_ID;
+
+      const req = new NextRequest("http://127.0.0.1:3000/api/auth/paypal/login", {
+        headers: { host: "127.0.0.1:3000" },
+      });
+      const res = await loginRoute(req);
+      expect(res.status).toBe(500);
+      const data = await res.json();
+      expect(data.error).toContain("PAYPAL_CLIENT_ID is not configured");
     });
   });
 

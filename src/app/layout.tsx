@@ -48,6 +48,7 @@ export default function RootLayout({
                 height={28}
                 priority
                 className="h-6 sm:h-7 w-auto"
+                style={{ width: "auto" }}
               />
             </Link>
 

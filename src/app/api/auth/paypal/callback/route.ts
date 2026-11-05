@@ -4,6 +4,17 @@ import { upsertSeller } from "@/db/queries";
 
 export const dynamic = "force-dynamic";
 
+function buildRedirectUrl(request: NextRequest, path: string): string {
+  const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  const isLocal = rawHost.includes("127.0.0.1") || rawHost.startsWith("localhost");
+  const protocol = request.headers.get("x-forwarded-proto") || (isLocal ? "http" : "https");
+  const host = rawHost.startsWith("localhost") ? rawHost.replace("localhost", "127.0.0.1") : rawHost;
+  if (host) {
+    return `${protocol}://${host}${path}`;
+  }
+  return new URL(path, request.url).toString();
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get("code");
@@ -13,7 +24,7 @@ export async function GET(request: NextRequest) {
   if (oauthError) {
     const errorDescription = searchParams.get("error_description") || oauthError;
     return NextResponse.redirect(
-      new URL(`/?auth_error=${encodeURIComponent(errorDescription)}`, request.url)
+      buildRedirectUrl(request, `/?auth_error=${encodeURIComponent(errorDescription)}`)
     );
   }
 
@@ -65,7 +76,7 @@ export async function GET(request: NextRequest) {
       const errBody = await tokenRes.text();
       console.error("[PayPal Auth Callback] Token exchange failed:", errBody);
       return NextResponse.redirect(
-        new URL(`/?auth_error=${encodeURIComponent("Failed to exchange authorization code")}`, request.url)
+        buildRedirectUrl(request, `/?auth_error=${encodeURIComponent("Failed to exchange authorization code")}`)
       );
     }
 
@@ -73,7 +84,7 @@ export async function GET(request: NextRequest) {
     const accessToken = tokenData.access_token;
     if (!accessToken) {
       return NextResponse.redirect(
-        new URL(`/?auth_error=${encodeURIComponent("No access token returned by PayPal")}`, request.url)
+        buildRedirectUrl(request, `/?auth_error=${encodeURIComponent("No access token returned by PayPal")}`)
       );
     }
 
@@ -93,7 +104,7 @@ export async function GET(request: NextRequest) {
       const errBody = await userinfoRes.text();
       console.error("[PayPal Auth Callback] Userinfo fetch failed:", errBody);
       return NextResponse.redirect(
-        new URL(`/?auth_error=${encodeURIComponent("Failed to fetch user profile")}`, request.url)
+        buildRedirectUrl(request, `/?auth_error=${encodeURIComponent("Failed to fetch user profile")}`)
       );
     }
 
@@ -105,7 +116,7 @@ export async function GET(request: NextRequest) {
 
     if (!paypalSub || !email) {
       return NextResponse.redirect(
-        new URL(`/?auth_error=${encodeURIComponent("Incomplete profile data from PayPal")}`, request.url)
+        buildRedirectUrl(request, `/?auth_error=${encodeURIComponent("Incomplete profile data from PayPal")}`)
       );
     }
 
@@ -122,7 +133,7 @@ export async function GET(request: NextRequest) {
       name: seller.name,
     });
 
-    const redirectResponse = NextResponse.redirect(new URL("/dashboard", request.url));
+    const redirectResponse = NextResponse.redirect(buildRedirectUrl(request, "/dashboard"));
 
     redirectResponse.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
       httpOnly: true,
@@ -146,7 +157,7 @@ export async function GET(request: NextRequest) {
     const errorMsg = err instanceof Error ? err.message : "Unexpected error during login";
     console.error("[PayPal Auth Callback] Exception:", errorMsg);
     return NextResponse.redirect(
-      new URL(`/?auth_error=${encodeURIComponent("Authentication server error")}`, request.url)
+      buildRedirectUrl(request, `/?auth_error=${encodeURIComponent("Authentication server error")}`)
     );
   }
 }

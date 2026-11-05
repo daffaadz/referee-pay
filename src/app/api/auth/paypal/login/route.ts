@@ -4,12 +4,13 @@ import { generateOAuthState, STATE_COOKIE_NAME } from "@/domain/session";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  // If request arrived via localhost, redirect to 127.0.0.1 so that the state cookie
-  // and the PayPal return URL share the exact same host origin.
-  if (request.nextUrl.hostname === "localhost") {
-    const targetUrl = new URL(request.url);
-    targetUrl.hostname = "127.0.0.1";
-    return NextResponse.redirect(targetUrl);
+  // Inspect the raw HTTP Host header sent by the client.
+  // In development, if the request arrived via localhost, redirect once to 127.0.0.1
+  // so that the state cookie and the PayPal return URL share the exact same host origin.
+  const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  if (rawHost.startsWith("localhost")) {
+    const port = rawHost.split(":")[1] || "3000";
+    return NextResponse.redirect(`http://127.0.0.1:${port}/api/auth/paypal/login`);
   }
 
   const clientId = process.env.PAYPAL_CLIENT_ID;
@@ -20,8 +21,18 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const appUrl = (process.env.APP_URL || request.nextUrl.origin).replace("localhost", "127.0.0.1");
-  const redirectUri = `${appUrl}/api/auth/paypal/callback`;
+  const isLocal = rawHost.includes("127.0.0.1");
+  const protocol = request.headers.get("x-forwarded-proto") || (isLocal ? "http" : "https");
+  let redirectUri: string;
+  if (isLocal) {
+    const port = rawHost.split(":")[1] || "3000";
+    redirectUri = `http://127.0.0.1:${port}/api/auth/paypal/callback`;
+  } else if (process.env.APP_URL && !process.env.APP_URL.includes("localhost") && !process.env.APP_URL.includes("127.0.0.1")) {
+    redirectUri = `${process.env.APP_URL.replace(/\/$/, "")}/api/auth/paypal/callback`;
+  } else {
+    redirectUri = `${protocol}://${rawHost}/api/auth/paypal/callback`;
+  }
+
   const state = generateOAuthState();
 
   const isSandbox = (process.env.PAYPAL_ENV || "sandbox").toLowerCase() === "sandbox";
