@@ -43,11 +43,10 @@ export default function RootLayout({
               <Image
                 src="/brand/referee-logo.svg"
                 alt="Referee"
-                width={124}
-                height={28}
+                width={954}
+                height={256}
                 priority
                 className="h-6 sm:h-7 w-auto"
-                style={{ width: "auto" }}
               />
             </Link>
 

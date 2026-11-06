@@ -7,9 +7,19 @@ const { Pool } = pg;
 
 const globalForDb = globalThis as unknown as { pool: pg.Pool };
 
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgres://referee:referee@localhost:5432/referee";
+function normalizeDatabaseUrl(rawUrl?: string): string {
+  const url = rawUrl || "postgres://referee:referee@localhost:5432/referee";
+  // Normalize sslmode to verify-full to eliminate pg-connection-string deprecation warning on Neon
+  if (url.includes("sslmode=require") && !url.includes("uselibpqcompat")) {
+    return url.replace("sslmode=require", "sslmode=verify-full");
+  }
+  if (url.includes("sslmode=prefer") && !url.includes("uselibpqcompat")) {
+    return url.replace("sslmode=prefer", "sslmode=verify-full");
+  }
+  return url;
+}
+
+const connectionString = normalizeDatabaseUrl(process.env.DATABASE_URL);
 
 export const pool =
   globalForDb.pool ||
