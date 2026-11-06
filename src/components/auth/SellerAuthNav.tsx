@@ -101,7 +101,7 @@ export function SellerAuthNav() {
     <div className="flex items-center gap-2">
       <Link
         href="/"
-        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm bg-primary-700 hover:bg-primary-800 text-white text-xs font-medium transition shadow-xs focus-visible:outline-2 focus-visible:outline-focus-ring"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-sm bg-primary-700 hover:bg-primary-800 text-white text-xs font-medium transition shadow-xs focus-visible:outline-2 focus-visible:outline-focus-ring"
       >
         <Plus size={14} weight="bold" />
         <span>New deal</span>

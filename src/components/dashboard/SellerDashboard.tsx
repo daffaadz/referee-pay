@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
@@ -22,8 +23,21 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import type { SellerAnalyticsResponse } from "@/domain/analytics";
 import { RefereeAnalystPanel } from "./RefereeAnalystPanel";
-import { BryntumScheduleBoard } from "@/components/schedule/BryntumScheduleBoard";
 import type { WidgetAction } from "@/agent/analyst";
+
+// Lazy-load fulfillment board on demand so overview renders instantly without loading Bryntum in memory
+const BryntumScheduleBoard = dynamic(
+  () => import("@/components/schedule/BryntumScheduleBoard").then((m) => m.BryntumScheduleBoard),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-96 flex flex-col items-center justify-center bg-surface border border-neutral-200 rounded-lg p-8 text-center space-y-3">
+        <div className="w-8 h-8 rounded-full border-2 border-primary-700 border-t-transparent animate-spin" />
+        <p className="text-xs text-neutral-600 font-medium">Loading fulfillment board...</p>
+      </div>
+    ),
+  }
+);
 
 interface SellerDashboardProps {
   initialTab?: "overview" | "fulfillment";
