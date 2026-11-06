@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { DealGanttData, GanttTask } from "@/domain/gantt";
 import { Clock, ShieldCheck, WarningCircle, CheckCircle, Info } from "@phosphor-icons/react/dist/ssr";
+import "@/styles/bryntum-gantt.css";
 
 // Skeleton fallback while Bryntum Gantt loads client-side
 function GanttSkeleton() {

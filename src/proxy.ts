@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/domain/session";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect /dashboard and /dashboard/*
@@ -36,4 +36,3 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ["/dashboard/:path*", "/api/seller/:path*"],
 };
-
