@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Flask, Plus } from "@phosphor-icons/react/dist/ssr";
 import { youngSerif, hankenGrotesk } from "./fonts";
 import { SellerAuthNav } from "@/components/auth/SellerAuthNav";
 import "./globals.css";
@@ -54,21 +53,6 @@ export default function RootLayout({
 
             <div className="flex items-center gap-3">
               <SellerAuthNav />
-              <div
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700 border border-border"
-                role="status"
-                aria-label="Payments use the PayPal sandbox. No real money moves."
-              >
-                <Flask size={16} weight="regular" className="text-neutral-600" aria-hidden="true" />
-                <span>Test mode</span>
-              </div>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-1.5 px-3.5 h-11 rounded-sm border border-neutral-300 bg-surface hover:bg-neutral-50 text-neutral-900 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-focus-ring"
-              >
-                <Plus size={16} weight="bold" aria-hidden="true" />
-                <span>New deal</span>
-              </Link>
             </div>
           </div>
         </header>
@@ -81,7 +65,7 @@ export default function RootLayout({
         {/* Footer (Compact 40px) */}
         <footer className="border-t border-border bg-surface shrink-0 h-10 px-4 sm:px-6 flex items-center">
           <div className="w-full max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-text-muted text-center sm:text-left">
-            <p>Referee. Test mode, no real money moves.</p>
+            <p>Referee. Neutral AI escrow with PayPal sandbox.</p>
             <p>AI drafts the terms. Always review them before you continue.</p>
           </div>
         </footer>

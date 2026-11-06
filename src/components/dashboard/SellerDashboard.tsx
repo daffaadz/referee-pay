@@ -17,13 +17,31 @@ import {
   Funnel,
   Lock,
   Sparkle,
+  ChartBar,
+  CalendarBlank,
 } from "@phosphor-icons/react/dist/ssr";
 import type { SellerAnalyticsResponse } from "@/domain/analytics";
 import { RefereeAnalystPanel } from "./RefereeAnalystPanel";
+import { BryntumScheduleBoard } from "@/components/schedule/BryntumScheduleBoard";
 import type { WidgetAction } from "@/agent/analyst";
 
-export function SellerDashboard() {
+interface SellerDashboardProps {
+  initialTab?: "overview" | "fulfillment";
+}
+
+export function SellerDashboard({ initialTab = "overview" }: SellerDashboardProps = {}) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"overview" | "fulfillment">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam === "fulfillment" || tabParam === "overview") {
+        return tabParam;
+      }
+    }
+    return initialTab;
+  });
+  const [sellerProfile, setSellerProfile] = useState<{ id: string; email: string; name?: string | null } | null>(null);
   const [data, setData] = useState<SellerAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +50,33 @@ export function SellerDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [isAnalystOpen, setIsAnalystOpen] = useState(false);
   const [activeWidgetFilter, setActiveWidgetFilter] = useState<WidgetAction | null>(null);
+
+  // Fetch seller profile to get their name
+  useEffect(() => {
+    let active = true;
+    fetch("/api/seller/me")
+      .then((res) => res.json())
+      .then((d) => {
+        if (active && d?.authenticated && d?.seller) {
+          setSellerProfile(d.seller);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleTabChange = (newTab: "overview" | "fulfillment") => {
+    setActiveTab(newTab);
+    if (typeof window !== "undefined") {
+      if (newTab === "fulfillment") {
+        window.history.replaceState(null, "", "/dashboard?tab=fulfillment");
+      } else {
+        window.history.replaceState(null, "", "/dashboard");
+      }
+    }
+  };
 
   const fetchAnalytics = useCallback(async () => {
     setRefreshing(true);
@@ -177,39 +222,18 @@ export function SellerDashboard() {
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-6">
       {/* Top Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-serif text-2xl sm:text-3xl text-neutral-900 tracking-tight">
-              Seller Command Center
-            </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700 border border-neutral-200">
-              AG Studio
-            </span>
-          </div>
+          <h1 className="font-serif text-2xl sm:text-3xl text-neutral-900 tracking-tight">
+            {sellerProfile?.name?.trim() || "Seller Command Center"}
+          </h1>
           <p className="text-xs text-neutral-600 mt-1">
-            Real time escrow telemetry, risk detection, and verified PayPal ledger.
+            {sellerProfile?.name?.trim() ? "Seller Command Center · " : ""}Real time escrow telemetry, risk detection, and verified PayPal ledger.
           </p>
         </div>
 
-        {/* Dashboard Navigation Tabs & Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 mr-2">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="px-3 py-1.5 rounded-sm border border-primary-300 bg-primary-50 text-xs font-medium text-primary-800 transition"
-              aria-current="page"
-            >
-              Overview (AG Studio)
-            </button>
-            <button
-              onClick={() => router.push("/dashboard/schedule")}
-              className="px-3 py-1.5 rounded-sm border border-neutral-200 hover:bg-neutral-50 text-xs font-medium text-neutral-700 transition"
-            >
-              Fulfillment Board (Bryntum)
-            </button>
-          </div>
-
+        {/* Actions (AI Analyst & Refresh) */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsAnalystOpen(!isAnalystOpen)}
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-sm border text-xs font-medium transition ${
@@ -231,15 +255,43 @@ export function SellerDashboard() {
             <ArrowsClockwise size={14} weight="bold" className={refreshing ? "animate-spin" : ""} />
             <span>Refresh</span>
           </button>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-sm bg-primary-700 hover:bg-primary-800 text-white text-xs font-medium transition"
-          >
-            <Plus size={14} weight="bold" />
-            <span>New deal</span>
-          </Link>
         </div>
       </div>
+
+      {/* Tab Navigation (under title & subtitle, styled as clean tabs with bottom border indicator) */}
+      <div className="border-b border-neutral-200 flex items-center gap-6" role="tablist" aria-label="Dashboard views">
+        <button
+          role="tab"
+          aria-selected={activeTab === "overview"}
+          onClick={() => handleTabChange("overview")}
+          className={`pb-3 text-sm font-semibold transition border-b-2 flex items-center gap-2 cursor-pointer ${
+            activeTab === "overview"
+              ? "border-primary-700 text-primary-800"
+              : "border-transparent text-neutral-600 hover:text-neutral-900"
+          }`}
+        >
+          <ChartBar size={16} weight={activeTab === "overview" ? "bold" : "regular"} />
+          <span>Overview</span>
+        </button>
+        <button
+          role="tab"
+          aria-selected={activeTab === "fulfillment"}
+          onClick={() => handleTabChange("fulfillment")}
+          className={`pb-3 text-sm font-semibold transition border-b-2 flex items-center gap-2 cursor-pointer ${
+            activeTab === "fulfillment"
+              ? "border-primary-700 text-primary-800"
+              : "border-transparent text-neutral-600 hover:text-neutral-900"
+          }`}
+        >
+          <CalendarBlank size={16} weight={activeTab === "fulfillment" ? "bold" : "regular"} />
+          <span>Fulfillment</span>
+        </button>
+      </div>
+
+      {activeTab === "fulfillment" ? (
+        <BryntumScheduleBoard embedded={true} />
+      ) : (
+        <div className="space-y-6">
 
       {/* REFEREE ANALYST PANEL (Studio Agent Framework) */}
       <RefereeAnalystPanel
@@ -641,6 +693,8 @@ export function SellerDashboard() {
           </table>
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 }

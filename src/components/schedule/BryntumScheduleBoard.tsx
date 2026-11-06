@@ -17,6 +17,7 @@ import {
   Sparkle,
   Radio,
   X,
+  Plus,
 } from "@phosphor-icons/react/dist/ssr";
 import type { ScheduleData, ScheduleEvent, ScheduleResource } from "@/domain/schedule";
 import { ScheduleBoardSkeleton } from "./ScheduleBoardSkeleton";
@@ -38,7 +39,11 @@ interface ToastMessage {
   type: "decision" | "state_change" | "info";
 }
 
-export function BryntumScheduleBoard() {
+export interface BryntumScheduleBoardProps {
+  embedded?: boolean;
+}
+
+export function BryntumScheduleBoard({ embedded = false }: BryntumScheduleBoardProps = {}) {
   const router = useRouter();
   const [data, setData] = useState<ScheduleData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -380,39 +385,19 @@ export function BryntumScheduleBoard() {
         </div>
       )}
 
-      {/* Top Header Row with Navigation Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
+      {/* Top Header Row with Navigation Tabs (rendered only if not embedded inside SellerDashboard) */}
+      {!embedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
+          <div>
             <h1 className="font-serif text-2xl sm:text-3xl text-neutral-900 tracking-tight">
               Fulfillment Board
             </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700 border border-neutral-200">
-              Bryntum Scheduler
-            </span>
+            <p className="text-xs text-neutral-600 mt-1">
+              Real time fulfillment timeline, delivery milestones, and automated Referee policy decisions.
+            </p>
           </div>
-          <p className="text-xs text-neutral-600 mt-1">
-            Real time fulfillment timeline, delivery milestones, and automated Referee policy decisions.
-          </p>
         </div>
-
-        {/* Dashboard Navigation Tabs */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="px-3 py-1.5 rounded-sm border border-neutral-200 hover:bg-neutral-50 text-xs font-medium text-neutral-700 transition"
-          >
-            Overview (AG Studio)
-          </button>
-          <button
-            onClick={() => router.push("/dashboard/schedule")}
-            className="px-3 py-1.5 rounded-sm border border-primary-300 bg-primary-50 text-xs font-medium text-primary-800 transition"
-            aria-current="page"
-          >
-            Fulfillment Board (Bryntum)
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Toolbar & Live Sync Status */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-surface p-3 sm:p-4 rounded-lg border border-neutral-200">
@@ -509,51 +494,70 @@ export function BryntumScheduleBoard() {
         </span>
       </div>
 
-      {/* Bryntum Scheduler Container */}
-      <div className="w-full h-[620px] bg-surface rounded-lg border border-neutral-200 shadow-xs overflow-hidden">
-        <BryntumScheduler
-          resources={data.resources}
-          events={data.events}
-          timeRanges={data.timeRanges}
-          columns={columns}
-          startDate={timelineBounds.start}
-          endDate={timelineBounds.end}
-          viewPreset={viewPreset}
-          rowHeight={64}
-          barMargin={6}
-          eventLayout="stack"
-          readOnly={true}
-          eventRenderer={eventRenderer}
-          onEventClick={handleEventClick}
-          groupFeature={isGrouped ? "statusLabel" : false}
-          timeRangesFeature={true}
-          eventTooltipFeature={{
-            template: (eventData: any) => {
-              const e = eventData.eventRecord;
-              if (e.isMilestone) {
-                return `
-                  <div class="p-3 text-xs space-y-1.5 max-w-xs font-sans">
-                    <div class="flex items-center gap-1.5 font-bold text-saffron-300">
-                      <span>Referee Decision: ${e.action || "DECISION"}</span>
+      {/* Bryntum Scheduler Container / Empty State */}
+      {data.resources.length === 0 ? (
+        <div className="w-full py-16 bg-surface rounded-lg border border-neutral-200 text-center flex flex-col items-center justify-center p-6 space-y-3">
+          <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
+            <Package size={24} weight="regular" />
+          </div>
+          <h3 className="font-serif text-lg text-neutral-900">No active deals yet</h3>
+          <p className="text-xs text-neutral-600 max-w-sm">
+            When buyers commit to an escrow deal, your fulfillment deadlines and automated carrier checkpoints will appear on this schedule.
+          </p>
+          <button
+            onClick={() => router.push("/")}
+            className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-sm bg-primary-700 hover:bg-primary-800 text-white text-xs font-medium transition shadow-xs focus-visible:outline-2 focus-visible:outline-focus-ring"
+          >
+            <Plus size={14} weight="bold" />
+            <span>Create a new deal</span>
+          </button>
+        </div>
+      ) : (
+        <div className="w-full h-[620px] bg-surface rounded-lg border border-neutral-200 shadow-xs overflow-hidden">
+          <BryntumScheduler
+            resources={data.resources}
+            events={data.events}
+            timeRanges={data.timeRanges}
+            columns={columns}
+            startDate={timelineBounds.start}
+            endDate={timelineBounds.end}
+            viewPreset={viewPreset}
+            rowHeight={64}
+            barMargin={6}
+            eventLayout="stack"
+            readOnly={true}
+            eventRenderer={eventRenderer}
+            onEventClick={handleEventClick}
+            groupFeature={isGrouped ? { field: "statusLabel" } : false}
+            timeRangesFeature={true}
+            eventTooltipFeature={{
+              template: (eventData: any) => {
+                const e = eventData.eventRecord;
+                if (e.isMilestone) {
+                  return `
+                    <div class="p-3 text-xs space-y-1.5 max-w-xs font-sans">
+                      <div class="flex items-center gap-1.5 font-bold text-saffron-300">
+                        <span>Referee Decision: ${e.action || "DECISION"}</span>
+                      </div>
+                      <p class="text-neutral-200 text-xs leading-relaxed">${e.shortRationale || ""}</p>
+                      ${e.clauseRefs && e.clauseRefs.length > 0 ? `<div class="text-[11px] text-neutral-400">Cited Clauses: ${e.clauseRefs.join(", ")}</div>` : ""}
+                      ${e.evidenceRefs && e.evidenceRefs.length > 0 ? `<div class="text-[11px] text-neutral-400">Cited Evidence: ${e.evidenceRefs.join(", ")}</div>` : ""}
+                      <div class="pt-1.5 text-[11px] text-primary-300 font-semibold border-t border-neutral-800">Click marker to open Deal Room</div>
                     </div>
-                    <p class="text-neutral-200 text-xs leading-relaxed">${e.shortRationale || ""}</p>
-                    ${e.clauseRefs && e.clauseRefs.length > 0 ? `<div class="text-[11px] text-neutral-400">Cited Clauses: ${e.clauseRefs.join(", ")}</div>` : ""}
-                    ${e.evidenceRefs && e.evidenceRefs.length > 0 ? `<div class="text-[11px] text-neutral-400">Cited Evidence: ${e.evidenceRefs.join(", ")}</div>` : ""}
-                    <div class="pt-1.5 text-[11px] text-primary-300 font-semibold border-t border-neutral-800">Click marker to open Deal Room</div>
+                  `;
+                }
+                return `
+                  <div class="p-3 text-xs space-y-1 max-w-xs font-sans">
+                    <div class="font-bold text-white text-xs">${e.name} (${e.state})</div>
+                    <div class="text-neutral-300 text-[11px]">Window: ${new Date(e.startDate).toLocaleDateString()} to ${new Date(e.endDate).toLocaleDateString()}</div>
+                    <div class="pt-1.5 text-[11px] text-primary-300 font-semibold border-t border-neutral-800">Click bar to open Deal Room</div>
                   </div>
                 `;
-              }
-              return `
-                <div class="p-3 text-xs space-y-1 max-w-xs font-sans">
-                  <div class="font-bold text-white text-xs">${e.name} (${e.state})</div>
-                  <div class="text-neutral-300 text-[11px]">Window: ${new Date(e.startDate).toLocaleDateString()} to ${new Date(e.endDate).toLocaleDateString()}</div>
-                  <div class="pt-1.5 text-[11px] text-primary-300 font-semibold border-t border-neutral-800">Click bar to open Deal Room</div>
-                </div>
-              `;
-            },
-          }}
-        />
-      </div>
+              },
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
