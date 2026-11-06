@@ -1,0 +1,454 @@
+openapi: 3.1.0
+info:
+  title: Referee Escrow & Arbiter API
+  version: 1.0.0
+  description: >
+    Neutral AI Escrow Arbiter API for creating deals, managing escrow status,
+    confirming delivery, and opening dispute claims under deterministic policy guardrails.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  contact:
+    name: Referee Support
+    url: https://referee-pay.vercel.app
+
+servers:
+  - url: https://referee-pay.vercel.app/api
+    description: Production / Demo Server
+  - url: http://127.0.0.1:3000/api
+    description: Local Development Server
+
+paths:
+  /deals:
+    post:
+      operationId: createDeal
+      summary: Create a new escrow deal contract
+      description: Initiates a new escrow contract between buyer and seller with AI-structured clauses and deadlines.
+      security:
+        - SellerSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDealRequest'
+      responses:
+        '201':
+          description: Deal successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDealResponse'
+        '400':
+          description: Invalid request parameters or contract terms
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Authentication required: Please sign in with PayPal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /deals/{token}:
+    get:
+      operationId: getDeal
+      summary: Retrieve deal status and audit trail
+      description: Fetches full deal details, immutable event logs, evidence artifacts, and arbiter decisions using a role capability token.
+      security:
+        - CapabilityToken: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Capability token of the deal (buyer or seller token)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deal found and returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDealResponse'
+        '404':
+          description: Deal not found or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /deals/{token}/confirm-receipt:
+    post:
+      operationId: confirmReceipt
+      summary: Confirm delivery and release escrow
+      description: Buyer explicitly acknowledges delivery, allowing the Referee Policy Engine to authorize immediate escrow release.
+      security:
+        - CapabilityToken: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Buyer capability token
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmReceiptRequest'
+      responses:
+        '200':
+          description: Receipt confirmed and release processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmReceiptResponse'
+        '400':
+          description: Invalid state transition or precondition not met
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /deals/{token}/claim:
+    post:
+      operationId: openClaim
+      summary: Open a dispute claim
+      description: Initiates a formal dispute claim during the inspection window. Escrow release is halted pending Referee arbitration.
+      security:
+        - CapabilityToken: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Capability token for the deal
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenClaimRequest'
+      responses:
+        '200':
+          description: Claim successfully opened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenClaimResponse'
+        '400':
+          description: Inspection window expired or claim preconditions violated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    CapabilityToken:
+      type: apiKey
+      in: header
+      name: X-Capability-Token
+      description: Capability token grant for deal room access.
+    SellerSession:
+      type: apiKey
+      in: cookie
+      name: referee_session
+      description: Signed JWT cookie established via Log in with PayPal.
+
+  schemas:
+    Clause:
+      type: object
+      required:
+        - id
+        - title
+        - text
+      properties:
+        id:
+          type: string
+          example: 'C1'
+        title:
+          type: string
+          example: 'Deposit and Hold'
+        text:
+          type: string
+          example: 'Buyer deposits $120.00 into Referee escrow before seller ships.'
+
+    ReturnPolicy:
+      type: object
+      required:
+        - allowed
+        - windowDays
+        - returnShippingPaidBy
+      properties:
+        allowed:
+          type: boolean
+          example: true
+        windowDays:
+          type: integer
+          example: 7
+        returnShippingPaidBy:
+          type: string
+          enum: [buyer, seller]
+          example: 'buyer'
+
+    CreateDealRequest:
+      type: object
+      required:
+        - title
+        - description
+        - amount
+        - currency
+        - buyerEmail
+        - sellerEmail
+        - shipDeadlineDays
+        - deliveryDeadlineDays
+        - inspectionDays
+        - clauses
+        - returnPolicy
+      properties:
+        title:
+          type: string
+          example: 'Vintage Leather Messenger Bag'
+        description:
+          type: string
+          example: 'Authentic 1970s full-grain leather messenger bag with brass buckles.'
+        amount:
+          type: string
+          example: '120.00'
+        currency:
+          type: string
+          example: 'USD'
+        buyerEmail:
+          type: string
+          format: email
+          example: 'buyer@example.com'
+        sellerEmail:
+          type: string
+          format: email
+          example: 'seller@example.com'
+        sellerPaypalEmail:
+          type: string
+          format: email
+          example: 'seller-paypal@example.com'
+        shipDeadlineDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+          example: 3
+        deliveryDeadlineDays:
+          type: integer
+          minimum: 1
+          maximum: 60
+          example: 10
+        inspectionDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+          example: 3
+        clauses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Clause'
+        returnPolicy:
+          $ref: '#/components/schemas/ReturnPolicy'
+
+    CreateDealResponse:
+      type: object
+      required:
+        - ok
+        - deal
+      properties:
+        ok:
+          type: boolean
+          example: true
+        deal:
+          type: object
+          properties:
+            id:
+              type: string
+            title:
+              type: string
+            status:
+              type: string
+              example: 'AWAITING_PAYMENT'
+            amount:
+              type: string
+            currency:
+              type: string
+            buyerToken:
+              type: string
+            sellerToken:
+              type: string
+            shareableUrl:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+
+    GetDealResponse:
+      type: object
+      required:
+        - ok
+        - deal
+        - role
+      properties:
+        ok:
+          type: boolean
+          example: true
+        role:
+          type: string
+          enum: [buyer, seller, public]
+        deal:
+          type: object
+          properties:
+            id:
+              type: string
+            title:
+              type: string
+            status:
+              type: string
+              enum:
+                - DRAFT
+                - AWAITING_PAYMENT
+                - FUNDS_HELD
+                - SHIPPED
+                - DELIVERED
+                - RELEASED
+                - REFUNDED
+                - CLAIM_OPENED
+                - ESCALATED_TO_HUMAN
+            amount:
+              type: string
+            currency:
+              type: string
+            carrier:
+              type:
+                - string
+                - 'null'
+            trackingNumber:
+              type:
+                - string
+                - 'null'
+            shipDeadline:
+              type: string
+              format: date-time
+            deliveryDeadline:
+              type: string
+              format: date-time
+            inspectionDeadline:
+              type: string
+              format: date-time
+        events:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              payload:
+                type: object
+              createdAt:
+                type: string
+                format: date-time
+        evidence:
+          type: array
+          items:
+            type: object
+        decisions:
+          type: array
+          items:
+            type: object
+
+    ConfirmReceiptRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          example: 'Package received in good condition.'
+
+    ConfirmReceiptResponse:
+      type: object
+      required:
+        - ok
+        - status
+      properties:
+        ok:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: 'RELEASED'
+        payoutBatchId:
+          type:
+            - string
+            - 'null'
+
+    OpenClaimRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          example: 'Item not as described'
+        description:
+          type: string
+          example: 'The bag has a torn strap not shown in the original listing.'
+        evidenceUrls:
+          type: array
+          items:
+            type: string
+            format: uri
+
+    OpenClaimResponse:
+      type: object
+      required:
+        - ok
+        - claimId
+        - status
+      properties:
+        ok:
+          type: boolean
+          example: true
+        claimId:
+          type: string
+        status:
+          type: string
+          example: 'CLAIM_OPENED'
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: 'Precondition failed: Ship deadline has elapsed'
+        details:
+          type:
+            - object
+            - 'null'

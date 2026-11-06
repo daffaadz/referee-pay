@@ -86,14 +86,16 @@ flowchart TD
 
 | Component | Technology | Usage & Integration Details |
 |---|---|---|
-| **PayPal Sandbox** | `@paypal/paypal-server-sdk` | Authorizes order (`intent=AUTHORIZE`), captures with `final_capture: true`, voids authorizations on refund, and handles payouts. Uses `PayPal-Request-Id` idempotency. |
-| **Kernel** | `@onkernel/sdk` | Launches remote cloud browsers in disposable containers, runs Playwright scripts, extracts tracking status, and saves verified screenshots. |
+| **PayPal Sandbox** | `@paypal/paypal-server-sdk` | Authorizes order (`intent=AUTHORIZE`), captures with `finalCapture: true`, voids authorizations on refund, and executes seller payouts. Strictly asserts `PAYPAL_ENV=sandbox` and uses SHA-256 idempotency keys (`PayPal-Request-Id`). |
+| **Kernel** | `@onkernel/sdk` | Launches remote cloud browsers in disposable containers, runs Playwright scripts, extracts DOM tracking milestones, and saves verified screenshots. |
 | **LLM Provider** | Google Gemini (`gemini-3.5-flash-lite`) | Powers both the Drafter Agent (natural language to contract) and Referee Arbiter Loop via Vercel AI SDK (`@ai-sdk/google` & `ai`). |
-| **Hosting & Database** | Vercel Hobby + Neon Postgres | Free serverless hosting for Next.js App Router with pooled Neon PostgreSQL connection. |
-| **APIMatic** | Dev-time Context | Used during development to validate PayPal SDK methods, schema constraints, and error codes against official API docs. |
-| **Web Framework** | Next.js 16 (Turbopack) | Modern React 19 App Router with server-rendered routes and mobile-first responsive Tailwind CSS. |
+| **AG Studio & AG Grid** | `ag-studio`, `ag-studio-react` | Powers the Seller Command Center at `/dashboard` with 4 core telemetry widgets, custom escrow visualization, and the conversational P1 Referee Analyst AI agent. |
+| **Bryntum** | `@bryntum/scheduler`, `@bryntum/gantt` | Fulfillment Board on `/dashboard` (Bryntum Scheduler) with live-updated deal windows and decision markers; Deal Room cascade (Bryntum Gantt) comparing planned baselines against actual progress. |
+| **APIMatic** | Dev-time Context & OpenAPI 3.1 | Dev-time tool for validating PayPal SDK and API types (`docs/APIMATIC_USAGE.md`). Authored official OpenAPI 3.1 contract (`openapi/referee.yaml`), static docs portal (`docs/api/index.html`), and TypeScript SDK (`sdk/`). |
+| **Hosting & Database** | Vercel Hobby + Neon Postgres | Serverless hosting for Next.js App Router with pooled Neon PostgreSQL connection. |
+| **Web Framework** | Next.js 16 (Webpack) | Modern React 19 App Router with server-rendered routes and mobile-first responsive Tailwind CSS. |
 | **ORM & DB** | Drizzle ORM & PostgreSQL | Strictly typed schemas with append-only event sourcing for all deal state transitions. |
-| **Test Harness** | Vitest | 71 unit and integration tests covering domain logic, policy engine, money safety, and routes. |
+| **Test Harness** | Vitest | 146 unit, policy, integration, and SDK tests passing across 25 test suites. |
 
 ---
 
