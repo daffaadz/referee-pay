@@ -20,8 +20,10 @@ jobs:
             echo "Error: APP_URL or INTERNAL_SWEEP_SECRET secret is not configured in GitHub repository secrets."
             exit 1
           fi
-          echo "Invoking $APP_URL/api/internal/sweep..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${APP_URL}/api/internal/sweep" \
+          # Strip trailing slashes and ensure HTTPS to prevent Vercel 308 redirects
+          CLEAN_URL=$(echo "$APP_URL" | sed 's:/*$::' | sed 's:^http://:https://:')
+          echo "Invoking ${CLEAN_URL}/api/internal/sweep..."
+          RESPONSE=$(curl -s -L -w "\n%{http_code}" -X POST "${CLEAN_URL}/api/internal/sweep" \
             -H "Content-Type: application/json" \
             -H "x-internal-secret: ${SWEEP_SECRET}")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
