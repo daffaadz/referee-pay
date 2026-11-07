@@ -21,7 +21,13 @@ jobs:
             exit 1
           fi
           # Strip trailing slashes and ensure HTTPS to prevent Vercel 308 redirects
-          CLEAN_URL=$(echo "$APP_URL" | sed 's:/*$::' | sed 's:^http://:https://:')
+          CLEAN_URL="${APP_URL}"
+          while [[ "$CLEAN_URL" == */ ]]; do
+            CLEAN_URL="${CLEAN_URL%/}"
+          done
+          if [[ "$CLEAN_URL" == http://* ]]; then
+            CLEAN_URL="https://${CLEAN_URL#http://}"
+          fi
           echo "Invoking ${CLEAN_URL}/api/internal/sweep..."
           RESPONSE=$(curl -s -L -w "\n%{http_code}" -X POST "${CLEAN_URL}/api/internal/sweep" \
             -H "Content-Type: application/json" \
