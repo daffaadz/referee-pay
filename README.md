@@ -6,6 +6,18 @@
 >
 > **Live Demo:** [https://referee-pay.vercel.app](https://referee-pay.vercel.app)
 
+> [!IMPORTANT]
+> **PayPal Sandbox Test Credentials for Judges**
+>
+> Judges can test both the Seller and Buyer flows immediately with pre-funded PayPal Sandbox accounts:
+>
+> | Role | Account Email | Password | Pre-Funded Balance |
+> |---|---|---|---|
+> | **Sandbox Buyer** (Personal) | `referee-buyer@personal.example.com` | `RefereeBuyer26` | $5,000.00 USD |
+> | **Sandbox Seller** (Business) | `referee-seller@personal.example.com` | `RefereeSeller26` | $5,000.00 USD |
+>
+> Alternatively, visit [1-Click Demo Seller](https://referee-pay.vercel.app/api/auth/demo) to enter the Seller Command Center instantly without logging into PayPal.
+
 ---
 
 ## 1. What It Is
@@ -163,7 +175,7 @@ Visit [http://localhost:3000](http://localhost:3000) to open the application.
    > *"Selling vintage leather messenger bag to Maya for $120. Shipping in 2 days with 7 day return window."*
    Click **Draft with AI**. The contract preview populates automatically with clauses `C1` to `C5`.
 2. **Generate Links:** Click **Create Deal Contract**. You will receive a **Seller Link** and a **Buyer Link**.
-3. **Buyer Funds:** Open the Buyer Link in a new tab. Click **Authorize on PayPal**. A centered checkout popup modal opens (or auto-redirects on mobile). Log in with your Sandbox Personal Buyer account and approve the escrow hold. The webhook and modal listener immediately capture the hold and status advances to **FUNDS_HELD**.
+3. **Buyer Funds:** Open the Buyer Link in a new tab. Click **Authorize on PayPal**. A centered checkout popup modal opens (or auto-redirects on mobile). Log in with the pre-funded Sandbox Buyer account (`referee-buyer@personal.example.com` / `RefereeBuyer26`) and approve the escrow hold. The webhook and modal listener immediately capture the hold and status advances to **FUNDS_HELD**.
 4. **Seller Ships:** Switch to the Seller tab. In the Current step panel, submit a tracking number (e.g. `MCK-123456`).
 5. **Kernel Verification:** Referee initiates cloud browser verification via Kernel. The live verification preview with screenshot artifact, carrier status, and timestamp appears immediately right in the Deal Room card.
 6. **Escrow Release:** Once delivered, the buyer confirms receipt in the Deal Room (or the automated deadline sweeper releases funds upon inspection window conclusion). Referee evaluates terms, the Policy Engine returns `ALLOWED`, and funds are released via PayPal capture and payout.

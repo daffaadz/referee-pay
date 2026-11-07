@@ -42,5 +42,6 @@ Thumbs.db
 
 # Documentation & specs (local only)
 /docs/
+/SUBMISSION.md
 
 .neon
