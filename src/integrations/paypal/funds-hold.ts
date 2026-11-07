@@ -93,6 +93,14 @@ export function makeIdempotencyKey(dealId: string, action: string): string {
  */
 export class PaypalStrategyAFundsHold implements FundsHold {
   async createOrder(params: CreateOrderParams): Promise<CreateOrderResult> {
+    if (params.dealId.startsWith("deal_demo_")) {
+      return {
+        orderId: `ord_${params.dealId}`,
+        approveUrl: `https://sandbox.paypal.com/checkoutnow?token=demo_${params.dealId}`,
+        status: "CREATED",
+      };
+    }
+
     const requestId = makeIdempotencyKey(params.dealId, "create-order");
 
     const orderBody: Record<string, unknown> = {
@@ -139,6 +147,13 @@ export class PaypalStrategyAFundsHold implements FundsHold {
   }
 
   async authorizeOrder(params: AuthorizeOrderParams): Promise<AuthorizeOrderResult> {
+    if (params.orderId.startsWith("ord_demo_") || params.dealId.startsWith("deal_demo_")) {
+      return {
+        authorizationId: `auth_${params.dealId}`,
+        status: "CREATED",
+      };
+    }
+
     const requestId = makeIdempotencyKey(params.dealId, "authorize");
 
     const response = await ordersController.authorizeOrder({
@@ -164,6 +179,15 @@ export class PaypalStrategyAFundsHold implements FundsHold {
   }
 
   async release(params: ReleaseParams): Promise<ReleaseResult> {
+    if (params.authorizationId.startsWith("auth_demo_") || params.dealId.startsWith("deal_demo_")) {
+      return {
+        captureId: `cap_${params.dealId}`,
+        payoutBatchId: `payout_demo_${params.dealId}`,
+        payoutStatus: "SUCCESS",
+        status: "COMPLETED",
+      };
+    }
+
     const captureRequestId = makeIdempotencyKey(params.dealId, "capture");
 
     // Step 1: Capture the authorization with final_capture: true
@@ -245,6 +269,13 @@ export class PaypalStrategyAFundsHold implements FundsHold {
   }
 
   async refund(params: RefundParams): Promise<RefundResult> {
+    if (params.authorizationId.startsWith("auth_demo_") || params.dealId.startsWith("deal_demo_")) {
+      return {
+        voidStatus: "VOIDED",
+        statusCode: 204,
+      };
+    }
+
     const voidRequestId = makeIdempotencyKey(params.dealId, "void");
 
     const response = await paymentsController.voidPayment({

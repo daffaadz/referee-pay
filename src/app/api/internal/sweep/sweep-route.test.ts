@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "./route";
+import { env } from "@/config/env";
 import * as dbQueries from "@/db/queries";
 import * as dbEvents from "@/db/events";
 import * as refereeAgent from "@/agent/referee";
@@ -27,7 +28,7 @@ describe("POST /api/internal/sweep", () => {
 
     const req = new Request("http://localhost:3000/api/internal/sweep", {
       method: "POST",
-      headers: { "x-internal-secret": "referee-internal-sweep-secret-demo" },
+      headers: { "x-internal-secret": env.INTERNAL_SWEEP_SECRET },
     });
 
     const res = await POST(req);
@@ -85,7 +86,7 @@ describe("POST /api/internal/sweep", () => {
 
     const req = new Request("http://localhost:3000/api/internal/sweep", {
       method: "POST",
-      headers: { "x-internal-secret": "referee-internal-sweep-secret-demo" },
+      headers: { "x-internal-secret": env.INTERNAL_SWEEP_SECRET },
     });
 
     const res = await POST(req);
