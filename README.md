@@ -107,7 +107,7 @@ flowchart TD
 | **Hosting & Database** | Vercel Hobby + Neon Postgres | Serverless hosting for Next.js App Router with pooled Neon PostgreSQL connection. |
 | **Web Framework** | Next.js 16 (Webpack) | Modern React 19 App Router with server-rendered routes and mobile-first responsive Tailwind CSS. |
 | **ORM & DB** | Drizzle ORM & PostgreSQL | Strictly typed schemas with append-only event sourcing for all deal state transitions. |
-| **Test Harness** | Vitest | 146 unit, policy, integration, and SDK tests passing across 25 test suites. |
+| **Test Harness** | Vitest | 145 unit, policy, integration, and SDK tests passing across 25 test suites. |
 
 ---
 
@@ -125,8 +125,8 @@ flowchart TD
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/referee.git
-cd referee
+git clone https://github.com/daffaadz/referee-pay.git
+cd referee-pay
 
 # 2. Install dependencies
 pnpm install
@@ -198,7 +198,7 @@ Visit [http://localhost:3000](http://localhost:3000) to open the application.
 
 ## 7. Automated Evaluations & Test Suites
 
-Referee includes automated golden-scenario evals (`pnpm eval`) and 79 comprehensive unit and negative tests (`pnpm test`):
+Referee includes automated golden-scenario evals (`pnpm eval`) and 145 comprehensive unit, policy, and negative tests (`pnpm test`):
 
 ### Golden Referee Scenarios
 Evaluated across 3 iterations each using real Gemini model calls (`gemini-3.5-flash-lite`), with all proposals passed through the deterministic Policy Engine:
