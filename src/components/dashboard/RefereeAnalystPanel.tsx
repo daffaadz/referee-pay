@@ -33,6 +33,188 @@ const QUICK_PROMPTS = [
   "Which buyers opened claims?",
 ];
 
+function renderInlineTokens(text: string): React.ReactNode[] {
+  const regex = /(\*\*[\s\S]*?\*\*|`[^`]+`)/g;
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.substring(lastIndex, match.index));
+    }
+
+    const token = match[0];
+    const key = `tok_${match.index}`;
+
+    if (token.startsWith("**") && token.endsWith("**")) {
+      const inner = token.slice(2, -2).trim();
+
+      if (inner.startsWith("`") && inner.endsWith("`")) {
+        nodes.push(
+          <code
+            key={key}
+            className="px-1.5 py-0.5 rounded bg-primary-50 font-mono text-[11px] font-semibold text-primary-900 border border-primary-200"
+          >
+            {inner.slice(1, -1)}
+          </code>
+        );
+      } else if (inner === "RELEASED") {
+        nodes.push(
+          <span
+            key={key}
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200"
+          >
+            RELEASED
+          </span>
+        );
+      } else if (inner === "FUNDS_HELD") {
+        nodes.push(
+          <span
+            key={key}
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200"
+          >
+            FUNDS_HELD
+          </span>
+        );
+      } else if (inner === "REFUNDED") {
+        nodes.push(
+          <span
+            key={key}
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-neutral-100 text-neutral-800 border border-neutral-300"
+          >
+            REFUNDED
+          </span>
+        );
+      } else if (inner === "DISPUTED") {
+        nodes.push(
+          <span
+            key={key}
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-800 border border-rose-200"
+          >
+            DISPUTED
+          </span>
+        );
+      } else {
+        nodes.push(
+          <strong key={key} className="font-semibold text-neutral-900">
+            {inner}
+          </strong>
+        );
+      }
+    } else if (token.startsWith("`") && token.endsWith("`")) {
+      nodes.push(
+        <code
+          key={key}
+          className="px-1.5 py-0.5 rounded bg-neutral-100 font-mono text-[11px] text-neutral-800 border border-neutral-200"
+        >
+          {token.slice(1, -1)}
+        </code>
+      );
+    }
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(text.substring(lastIndex));
+  }
+
+  return nodes;
+}
+
+function FormattedAnalystMessage({ content }: { content: string }) {
+  const lines = content.split("\n");
+  const elements: React.ReactNode[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+
+    if (!line) {
+      elements.push(<div key={`sp_${i}`} className="h-1.5" />);
+      continue;
+    }
+
+    if (/^(\-{3,}|\*{3,})$/.test(line)) {
+      elements.push(
+        <hr key={`hr_${i}`} className="my-2.5 border-t border-neutral-200" />
+      );
+      continue;
+    }
+
+    if (line.startsWith("### ")) {
+      elements.push(
+        <h4
+          key={`h4_${i}`}
+          className="text-xs font-semibold text-neutral-900 uppercase tracking-wide mt-3 mb-1.5 pb-1 border-b border-neutral-100 flex items-center gap-1.5 first:mt-0"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-primary-600 shrink-0" />
+          <span>{renderInlineTokens(line.replace(/^###\s+/, ""))}</span>
+        </h4>
+      );
+      continue;
+    }
+
+    if (line.startsWith("## ") || line.startsWith("# ")) {
+      elements.push(
+        <h3
+          key={`h3_${i}`}
+          className="text-sm font-semibold text-neutral-900 mt-3 mb-1.5 first:mt-0"
+        >
+          {renderInlineTokens(line.replace(/^#{1,2}\s+/, ""))}
+        </h3>
+      );
+      continue;
+    }
+
+    const numMatch = line.match(/^(\d+)\.\s+(.*)$/);
+    if (numMatch) {
+      elements.push(
+        <div
+          key={`num_${i}`}
+          className="flex items-start gap-2 my-1 pl-1 text-xs text-neutral-800"
+        >
+          <span className="font-mono text-[11px] font-semibold text-primary-700 shrink-0 min-w-[16px]">
+            {numMatch[1]}.
+          </span>
+          <div className="flex-1 leading-relaxed">
+            {renderInlineTokens(numMatch[2])}
+          </div>
+        </div>
+      );
+      continue;
+    }
+
+    const bulletMatch = line.match(/^[\*\-]\s+(.*)$/);
+    if (bulletMatch) {
+      elements.push(
+        <div
+          key={`bul_${i}`}
+          className="flex items-start gap-2 my-1 pl-1 text-xs text-neutral-800"
+        >
+          <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary-600 shrink-0" />
+          <div className="flex-1 leading-relaxed">
+            {renderInlineTokens(bulletMatch[1])}
+          </div>
+        </div>
+      );
+      continue;
+    }
+
+    elements.push(
+      <p
+        key={`p_${i}`}
+        className="my-1 text-xs text-neutral-700 leading-relaxed first:mt-0 last:mb-0"
+      >
+        {renderInlineTokens(line)}
+      </p>
+    );
+  }
+
+  return <div className="space-y-0.5">{elements}</div>;
+}
+
 export function RefereeAnalystPanel({
   onApplyWidgetAction,
   isOpen,
@@ -162,20 +344,24 @@ export function RefereeAnalystPanel({
       </div>
 
       {/* Message History */}
-      <div className="max-h-80 overflow-y-auto space-y-3 p-2 bg-neutral-50/60 rounded-md border border-neutral-200/80">
+      <div className="max-h-96 overflow-y-auto space-y-3 p-2 bg-neutral-50/60 rounded-md border border-neutral-200/80">
         {messages.map((m) => (
           <div
             key={m.id}
             className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}
           >
             <div
-              className={`max-w-[85%] rounded-lg p-3 text-xs leading-relaxed ${
+              className={`rounded-lg p-3.5 text-xs leading-relaxed ${
                 m.role === "user"
-                  ? "bg-primary-700 text-white"
-                  : "bg-surface border border-neutral-200 text-neutral-900 shadow-sm"
+                  ? "max-w-[85%] bg-primary-700 text-white"
+                  : "w-full max-w-[95%] bg-surface border border-neutral-200/90 text-neutral-900 shadow-sm"
               }`}
             >
-              <p className="whitespace-pre-line">{m.content}</p>
+              {m.role === "user" ? (
+                <p className="whitespace-pre-line">{m.content}</p>
+              ) : (
+                <FormattedAnalystMessage content={m.content} />
+              )}
 
               {/* Tools Executed by Agent */}
               {m.toolsUsed && m.toolsUsed.length > 0 && (
