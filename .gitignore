@@ -33,6 +33,7 @@ Thumbs.db
 
 # IDE files
 .agent/
+.agents/
 .idea/
 *.suo
 *.ntvs*
@@ -45,3 +46,15 @@ Thumbs.db
 /SUBMISSION.md
 
 .neon
+
+# Demo video & brag output (local only)
+skills-lock.json
+demo-video/
+demo-video/.secrets/
+demo-video/assets/clips/raw/
+demo-video/out/
+demo-video/assets/
+demo-video/capture/
+demo-video/scenes/
+brag-output/
+
